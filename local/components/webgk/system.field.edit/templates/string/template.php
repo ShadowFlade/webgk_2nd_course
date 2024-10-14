@@ -3,7 +3,7 @@
 foreach ($arResult["VALUE"] as $res):
 ?><div class="fields string"><?
 	if($arParams["arUserField"]["SETTINGS"]["ROWS"] < 2):
-?><input type="text" name="<?=$arParams["arUserField"]["FIELD_NAME"]?>" value="<?=$res?>"<?
+?><input type="text" name="<?=$arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]?>" value="<?=$res?>"<?
 	if (intval($arParams["arUserField"]["SETTINGS"]["SIZE"]) > 0):
 		?> size="<?=$arParams["arUserField"]["SETTINGS"]["SIZE"]?>"<?
 	endif;

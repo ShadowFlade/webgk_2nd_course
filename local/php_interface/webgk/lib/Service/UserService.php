@@ -24,18 +24,22 @@ class UserService
 
     public function OnBeforeUserRegister(&$arFields)
     {
+        global $APPLICATION;
+
         $isOk = true;
         if ($arFields['UF_TYPE'] == 'JURIDICAL') {
             $isOk = self::CheckReqFields($this->JUR_REQ_FIELDS, $arFields);
         } else if ($arFields['UF_TYPE'] == 'PHYSICAL') {
             $isOk = self::CheckReqFields($this->PHYS_REQ_FIELDS, $arFields);
+        } else {
+            $APPLICATION->ThrowException('Тип пользователя (физическое лицо или юридическое лицо) не выбран');
         }
 
-        global $APPLICATION;
-        $exceptionMessage = 'Не заполнено поля:  ' . array_map(fn($item) => $item['LANG_ERROR_MESSAGE']
-                ?: $item['LANG_NAME'], $arFields['EMPTY_FIELDS']);
+
 
         if (!$isOk) {
+            $exceptionMessage = 'Не заполнено поля:  ' . array_map(fn($item) => $item['LANG_ERROR_MESSAGE']
+                    ?: $item['LANG_NAME'], $arFields['EMPTY_FIELDS']);
             \Bitrix\Main\Diag\Debug::writeToFile(['not ok' => $arFields], date("d.m.Y H:i:s"), "local/log.log");
             $APPLICATION->ThrowException($exceptionMessage);
             return false;
