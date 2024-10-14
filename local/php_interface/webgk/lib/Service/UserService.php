@@ -24,6 +24,8 @@ class UserService
 
     public function OnBeforeUserRegister(&$arFields)
     {
+        \Bitrix\Main\Diag\Debug::writeToFile(['on before'], date("d.m.Y H:i:s"), "local/log.log");
+
         global $APPLICATION;
 
         $isOk = true;

@@ -15,7 +15,7 @@
 
 $bWasSelect = false;
 
-?><input type="hidden" name="<?=$arParams["arUserField"]["FIELD_NAME"]?>" value=""><?
+?><input type="hidden" name="<?=$arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]?>" value=""><?
 
 if ($arParams["arUserField"]["SETTINGS"]["DISPLAY"] == "CHECKBOX")
 {
@@ -31,14 +31,14 @@ if ($arParams["arUserField"]["SETTINGS"]["DISPLAY"] == "CHECKBOX")
 			<label><input
 				type="checkbox"
 				value="<?echo $key?>"
-				name="<?=$arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]?>"
+				name="<?=$arParams["arUserField"]["FIELD_NAME"]?>"
 				<?echo ($bSelected? "checked" : "")?>
 			><?=$val?></label><br />
 		<?else:?>
 			<label><input
 				type="radio"
 				value="<?echo $key?>"
-				name="<?=$arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]?>"
+				name="<?=$arParams["arUserField"]["FIELD_NAME"]?>"
 				<?echo ($bSelected? "checked" : "")?>
 			><?=$val?></label><br />
 		<?endif;?><?
@@ -48,7 +48,7 @@ else
 {
 	?><select
 		class="bx-user-field-enum <?=$arParams['extra_input_class']?>"
-		name="<?=$arParams['input_name'] ?:  $arParams["arUserField"]["FIELD_NAME"]?>"
+		name="<?=$arParams["arUserField"]["FIELD_NAME"]?>"
 		<?if($arParams["arUserField"]["SETTINGS"]["LIST_HEIGHT"] > 1):?>
 			size="<?=$arParams["arUserField"]["SETTINGS"]["LIST_HEIGHT"]?>"
 		<?endif;?>
