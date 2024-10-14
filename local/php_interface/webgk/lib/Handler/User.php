@@ -17,7 +17,8 @@ class User
             $isOk = self::CheckReqFields($userService->PHYS_REQ_FIELDS, $arFields);
         }
         global $APPLICATION;
-        $exceptionMessage = 'Не заполнено поля  ' . array_map(fn($item) => $item['LANG_ERROR_MESSAGE'] ?: $item['LANG_NAME'],$arFields['EMPTY_FIELDS']);
+        $exceptionMessage = 'Не заполнено поля  ' . array_map(fn($item) => $item['LANG_ERROR_MESSAGE']
+                ?: $item['LANG_NAME'],$arFields['EMPTY_FIELDS']);
 
         if (!$isOk) {
             \Bitrix\Main\Diag\Debug::writeToFile(['not ok' => $arFields], date("d.m.Y H:i:s"), "local/log.log");
