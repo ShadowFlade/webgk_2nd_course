@@ -1,2 +1,4 @@
 bitrix
 upload
+*.log
+*test*

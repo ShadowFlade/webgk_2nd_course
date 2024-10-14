@@ -1,0 +1,3 @@
+<?php
+
+define('USER_GROUP_PARTNERS','PARTNERS');
