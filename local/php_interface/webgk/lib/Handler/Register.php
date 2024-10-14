@@ -12,6 +12,8 @@ class Register
         self::initMainHandlers();
         self::initSaleHandlers();
         self::initCatalogHandlers();
+        self::initUserHandlers();
+
     }
 
     private static function initIblockHandlers()
@@ -32,6 +34,13 @@ class Register
     private static function initCatalogHandlers()
     {
 
+    }
+
+    private static function initUserHandlers()
+    {
+        \Bitrix\Main\Diag\Debug::writeToFile('user handlers', date("d.m.Y H:i:s"), "local/log.log");
+
+        self::$eventManager->addEventHandler('main', 'OnBeforeUserRegister', ['\Webgk\Handler\User', 'OnBeforeUserRegister']);
     }
 }
 
