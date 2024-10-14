@@ -19,8 +19,11 @@ $curPage = $APPLICATION->GetCurPage(true);
 	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 	<meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, width=device-width">
 	<link rel="shortcut icon" type="image/x-icon" href="<?=SITE_DIR?>favicon.ico" />
+    <? $APPLICATION->IncludeFile('/include/header/scripts.php');?>
 	<? $APPLICATION->ShowHead(); ?>
 </head>
+<? $APPLICATION->IncludeFile('/include/header/js_controller_urls.php');?>
+
 <body class="bx-background-image bx-theme-<?=$theme?>" <?$APPLICATION->ShowProperty("backgroundImage");?>>
 <div id="panel"><? $APPLICATION->ShowPanel(); ?></div>
 <?$APPLICATION->IncludeComponent(
