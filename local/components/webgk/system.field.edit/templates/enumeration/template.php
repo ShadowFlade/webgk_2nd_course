@@ -58,6 +58,9 @@ else
 	>
 	<?
 	$values = $arResult["VALUE"];
+    echo '<pre>';
+    print_r($arParams["arUserField"]["USER_TYPE"]["FIELDS"]);
+    echo '</pre>';
 	if(!is_array($values))
 		$values = array($values);
 	$values = array_map("strval", $values);

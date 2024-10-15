@@ -39,6 +39,8 @@ class CaptchaService
 
         if (!empty($decoded_response) && $decoded_response['success'] && $decoded_response['score'] > $this->MIN_SCORE) {
             // $this->log("Captcha validation: success " . $decoded_response['score'], false);
+            \Bitrix\Main\Diag\Debug::writeToFile(['catpcha score' => $decoded_response['score']], date("d.m.Y H:i:s"), "local/log.log");
+
             return true;
         } else {
 
