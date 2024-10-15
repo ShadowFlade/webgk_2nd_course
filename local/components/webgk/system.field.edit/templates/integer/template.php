@@ -8,7 +8,7 @@ foreach ($arResult["VALUE"] as $res):?><div class="fields integer">
 	if ($arParams["arUserField"]["EDIT_IN_LIST"]!="Y"):
 		?> disabled="disabled"<?
 	endif;
-?> class="fields integer <?=$arParams['extra_input_class']?>"></div><?
+?> class="fields integer <?=$arParams['extra_input_class']?> <?=$arParams['extra_classes']?>"></div><?
 endforeach;?>
 </div>
 <?if ($arParams["arUserField"]["MULTIPLE"] == "Y" && $arParams["SHOW_BUTTON"] != "N"):?>

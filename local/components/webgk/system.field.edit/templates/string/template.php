@@ -13,7 +13,7 @@ foreach ($arResult["VALUE"] as $res):
 	if ($arParams["arUserField"]["EDIT_IN_LIST"]!="Y"):
 		?> disabled="disabled"<?
 	endif;
-?> class="fields string <?=$arParams['extra_input_class']?>"><?
+?> class="fields string <?=$arParams['extra_input_class']?> <?=$arParams['extra_classes']?>"><?
 	else:
 ?><textarea class="fields string" name="<?=$arParams["arUserField"]["FIELD_NAME"]?>"<?
 	?> cols="<?=$arParams["arUserField"]["SETTINGS"]["SIZE"]?>"<?

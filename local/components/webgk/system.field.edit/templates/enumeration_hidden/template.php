@@ -14,9 +14,7 @@
  */
 
 $bWasSelect = false;
-echo '<pre>';
-var_dump($arParams["arUserField"]['DEFAULT_VALUE']);
-echo '</pre>';
+
 ?><input
         type="hidden"
         name="<?= $arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"] ?>"
