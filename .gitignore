@@ -1,4 +1,4 @@
-bitrix
-upload
+/bitrix
+/upload
 *.log
 *test*

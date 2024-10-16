@@ -1,0 +1,53 @@
+.register__tabs {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.register__tab {
+    padding: 0.7rem;
+    text-align: center;
+    border: 1px solid blue;
+    cursor: pointer;
+
+}
+
+.register__tab:hover {
+    color: white;
+    background-color: #0000ff45;
+}
+
+.register__tab.active {
+    color: white;
+    background-color: #0000ff7a;
+}
+
+.custom-user-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.reg-form__active--active-phys .jur-field {
+    display: none;
+}
+
+.reg-form__active--active-phys .phys-field {
+    display: flex;
+}
+
+.reg-form__active--active-jur .phys {
+    display: none;
+}
+
+.reg-form__active--active-jur .jur-field {
+    display: flex;
+}
+
+.custom-user-field--type {
+    visibility:hidden;
+    height:0;
+}
