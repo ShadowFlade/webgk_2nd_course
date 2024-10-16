@@ -33,7 +33,7 @@ class CatalogSyncService
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
             'select' => ['ID', 'XML_ID']
         ])->fetchAll();
-        $this->createProps($els[0], $this->GOODS_IB_ID_IN);
+        $this->createProps();
 
         foreach ($els as $el) {
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
@@ -45,19 +45,36 @@ class CatalogSyncService
                     'select' => ['ID', 'XML_ID']
                 ])->getSelectedRowsCount() > 0;
             if ($isThisElExists) {
-                $propertyValues = array_map(fn($prop) => [$prop['CODE'] => $prop['VALUE'] ?? $prop['VALUES']], $props);
+                $allProps = [];
+                foreach ($props as $prop) {
+
+                    $propertyValues = [];
+                    if (is_array($prop['VALUE'])) {
+                        $propValNew = [];
+                        foreach ($prop['VALUE'] as $key => $propVal) {
+                            $propValNew['VALUE'] = $propVal;
+                            $propValNew['DESCRIPTION'] = $prop['DESCRIPTION'][$key];
+                            $propertyValues[] = $propValNew;
+                        }
+
+                    } else {
+                        $propertyValues = $prop['VALUE'];
+                    }
+                    $propVals = $propertyValues;
+                    $allProps[$prop['CODE']] = $propVals;
+                }
                 $newEl->Update(
                     $fields['ID'],
                     array_merge(
                         $fields,
-                        ['PROPERTY_VALUES' => $propertyValues]
+                        ['PROPERTY_VALUES' => $allProps]
                     )
                 );
             }
         }
     }
 
-    public function createProps() //TODO refactor to CIBlockProperty
+    public function createProps()
     {
         $propsCount = 0;
 
@@ -94,7 +111,7 @@ class CatalogSyncService
                     'ACTIVE' => $prop['ACTIVE'],
                     'SORT' => $prop['PROPERTY_SORT'] ?? $prop['SORT'],
                     'CODE' => $prop['CODE'],
-                    'IBLOCK_ID' =>  $this->GOODS_IB_ID_OUT,
+                    'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                     'PROPERTY_TYPE' => $prop['PROPERTY_TYPE'],
                     'USER_TYPE' => $prop['USER_TYPE'],
                     'USER_TYPE_SETTINGS' => $prop['USER_TYPE_SETTINGS'],
@@ -123,7 +140,6 @@ class CatalogSyncService
         $propsDeleted = 0;
         $propsErrors = 0;
 
-        // Удаляем каждое свойство
         while ($property = $propertyRes->Fetch()) {
             $propertyId = $property['ID'];
 
@@ -148,7 +164,7 @@ class CatalogSyncService
             'ACTIVE' => $fields['ACTIVE'],
             'SORT' => $fields['PROPERTY_SORT'] ?? $fields['SORT'],
             'CODE' => $fields['CODE'],
-            'IBLOCK_ID' =>  $this->GOODS_IB_ID_OUT,
+            'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
             'PROPERTY_TYPE' => $fields['PROPERTY_TYPE'],
             'USER_TYPE' => $fields['USER_TYPE'],
             'USER_TYPE_SETTINGS' => $fields['USER_TYPE_SETTINGS'],
