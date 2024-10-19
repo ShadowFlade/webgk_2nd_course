@@ -4,6 +4,8 @@ namespace Webgk\Service;
 
 use Bitrix\Iblock\ElementTable;
 use Bitrix\Iblock\PropertyTable;
+use Bitrix\Main\IO;
+use Bitrix\Main\Application;
 
 class CatalogSyncService
 {
@@ -12,6 +14,12 @@ class CatalogSyncService
     private $GOODS_IB_ID_OUT;
     private $GOODS_TP_IB_ID_OUT;
     private $app;
+    private $oldElsMain;
+
+    private $existingElsMain;
+    private $existingElsOffers;
+    private $PROCESS_LOG = '/local/logs/catalog_syn/process.log';
+    private $ERROR_LOG = '/local/logs/catalog_syn/error.log';
 
     private $PROP_TYPES = [
         'LIST' => ['PROPERTY_TYPE' => 'L', 'USER_TYPE' => ''],
@@ -33,35 +41,38 @@ class CatalogSyncService
 
     public function init()
     {
-        $this->syncMainCatalog();
-        $this->syncOffers();
+        $newEls = $this->syncMainCatalog();//TODO mb create a temp table for this
+        $this->syncOffers($newEls);
     }
 
-    public function createProps()
+    public function createProps($ibIn, $ibOut)
     {
-        $propsCount = 0;
+        $propsCount = [];
 
-        $propsDB = \CIBlockProperty::GetList([], ["IBLOCK_ID" => $this->GOODS_IB_ID_IN]);
-        $existingPropsInNewCatalogDB = PropertyTable::getList(['filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT], 'select' => ['NAME', 'ID', 'CODE']]);
+        $propsDB = \CIBlockProperty::GetList([], ["IBLOCK_ID" => $ibIn]);
+        $existingPropsInNewCatalogDB = PropertyTable::getList(['filter' => ['IBLOCK_ID' => $ibOut], 'select' => ['NAME', 'ID', 'CODE']]);
 
         while ($existingProp = $existingPropsInNewCatalogDB->fetch()) {
             $existingProps[$existingProp['CODE']] = $existingProp;
         }
+        \Bitrix\Main\Diag\Debug::writeToFile($existingProps, date("d.m.Y H:i:s"), "local/log1.log");
 
 
         while ($prop = $propsDB->GetNext()) {
             $props[] = $prop;
         }
+        \Bitrix\Main\Diag\Debug::writeToFile(['all props' => $props], date("d.m.Y H:i:s"), "local/log1.log");
+
 
         if (empty($props)) {
             $this->app->ThrowException('В исходном ИБ свойств не обнаружено');
         }
 
-        $propsSkipped = 0;
+        $propsSkipped = [];
         foreach ($props as $prop) {
 
             if (isset($existingProps[$prop['CODE']])) {//if prop with such code already exists skip it - maybe change it to configurable later
-                $propsSkipped++;
+                $propsSkipped[] = [$prop['CODE']];
                 continue;
             }
 
@@ -79,14 +90,19 @@ class CatalogSyncService
                     global $APPLICATION;
                     $APPLICATION->ThrowException($id->LAST_ERROR, ' Ошибка при создании свойства типа список');
                 }
+                $propsCount[] = [$prop['CODE']];
 
+            } else if ($prop['PROPERTY_TYPE'] == 'N') {//скипаем создание свойства типа integer потому что в нашем каталоге не будет такого типа и мне лень проверять работает он так или нет
+                $propsSkipped[] = [$prop['CODE']];
+
+                continue;
             } else { //creating property of type string or file or catalogue
                 $newPropFields = [
                     'NAME' => $prop['NAME'],
                     'ACTIVE' => $prop['ACTIVE'],
                     'SORT' => $prop['PROPERTY_SORT'] ?? $prop['SORT'],
                     'CODE' => $prop['CODE'],
-                    'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
+                    'IBLOCK_ID' => $ibOut,
                     'PROPERTY_TYPE' => $prop['PROPERTY_TYPE'],
                     'USER_TYPE' => $prop['USER_TYPE'],
                     'USER_TYPE_SETTINGS' => $prop['USER_TYPE_SETTINGS'],
@@ -95,6 +111,10 @@ class CatalogSyncService
                     'DEF' => $prop['DEFAULT_VALUE']
                 ];
 
+                if (isset($prop['LINK_IBLOCK_ID'])) {//
+                    $newPropFields['LINK_IBLOCK_ID'] = $this->GOODS_TP_IB_ID_OUT;
+                }
+
 
                 $id = $newProp->Add($newPropFields);
 
@@ -102,14 +122,23 @@ class CatalogSyncService
                     global $APPLICATION;
                     $APPLICATION->ThrowException($id->LAST_ERROR . '; [custom webgk message] Ошибка при создании свойства типа строка, файл или справочник');
                 }
+                $propsCount[] = $prop['CODE'];
+
             }
-            $propsCount++;
 
+            $this->logProcess(
+                [
+                    'props created count' => $propsCount,
+                    'props created' => count($propsCount),
+                    'props skipped count' => count($propsSkipped),
+                    'props skipped' => $propsSkipped
+                ],
+                true,
+            );
+            \Bitrix\Main\Diag\Debug::writeToFile(['props created' => $propsCount, 'props skipped' => $propsSkipped], date("d.m.Y H:i:s"), "local/log1.log");
+
+            return $propsCount;
         }
-
-        $this->logProcess(['props created' => $propsCount, 'props skipped' => $propsSkipped]);
-
-        return $propsCount;
     }
 
     public function deleteAllProps($iblockID)
@@ -153,11 +182,6 @@ class CatalogSyncService
         return $allProps;
     }
 
-    private function syncTpCatalog()
-    {
-
-    }
-
     private function createListProp($fields)
     {
         $newFields = [
@@ -184,27 +208,38 @@ class CatalogSyncService
 
     }
 
-    private function createCatalogueProp($fields)
+    private function log($message, $filePath, $isStart)
     {
-        $newFields = $fields;
+        if ($isStart) {
+            $file = new IO\File(Application::getDocumentRoot() . $filePath);
+            $file->delete();
+        }
+
+        \Bitrix\Main\Diag\Debug::writeToFile($message, date("d.m.Y H:i:s"), $filePath);
     }
 
-    private function logProcess($message)
+    private function logProcess($message, $isStart = false)
     {
-        \Bitrix\Main\Diag\Debug::writeToFile($message, date("d.m.Y H:i:s"), "local/logs/catalog_syn/process.log");
+        $this->log($message, $this->PROCESS_LOG, $isStart);
     }
 
-    private function logError($message)
+    private function logError($message, $isStart = false)
     {
-        \Bitrix\Main\Diag\Debug::writeToFile($message, date("d.m.Y H:i:s"), "local/logs/catalog_syn/error.log");
+        $this->log($message, $this->ERROR_LOG, $isStart);
+
     }
 
     private function syncMainCatalog()
     {
-        $els = \Bitrix\Iblock\ElementTable::getList([
+        $elsDB = \Bitrix\Iblock\ElementTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
             'select' => ['ID', 'XML_ID', 'CODE']
-        ])->fetchAll();
+        ]);
+        while ($el = $elsDB->fetch()) {
+            $els[$el['ID']] = $el;
+        }
+        \Bitrix\Main\Diag\Debug::writeToFile(['olds els in ' => $els], date("d.m.Y H:i:s"), "local/log.log");
+
         $existingElsDB = \Bitrix\Iblock\ElementTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT],
             'select' => ['ID', 'XML_ID', 'CODE']
@@ -213,12 +248,16 @@ class CatalogSyncService
         while ($existingEl = $existingElsDB->fetch()) {
             $existingEls[$existingEl['CODE']] = $existingEl;
         }
+        $this->oldElsMain = $els;
+        $this->existingElsMain = $existingEls;
         \Bitrix\Main\Diag\Debug::writeToFile($existingEls, date("d.m.Y H:i:s"), "local/log.log");
 
 
-        $this->createProps();
+        $this->createProps($this->GOODS_IB_ID_IN, $this->GOODS_IB_ID_OUT);
         $createdCount = 0;
         $updatedCount = 0;
+
+        $newEls = [];
 
         foreach ($els as $el) {
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
@@ -245,6 +284,7 @@ class CatalogSyncService
                 if (!$isUpdated) {
                     $this->logError(['not updated' => $newEl->LAST_ERROR]);
                 } else {
+                    $newEls[$el['ID']] = $existingEls[$el['CODE']]['ID'];
                     $updatedCount++;
                 }
             } else {
@@ -255,19 +295,144 @@ class CatalogSyncService
                     $this->logError(['not created ' => $newEl->LAST_ERROR]);
 
                 } else {
+                    $newEls[$el['CODE']] = $id;
                     $createdCount++;
 
                 }
             }
         }
-        \Bitrix\Main\Diag\Debug::writeToFile(['fields' => $fields], date("d.m.Y H:i:s"), "local/log.log");
 
         $this->logProcess(['created' => $createdCount, ' updated' => $updatedCount]);
+        \Bitrix\Main\Diag\Debug::writeToFile(['new els' => $newEls], date("d.m.Y H:i:s"), "local/log.log");
+
+        return $newEls;
     }
 
-    private function syncOffers()
+    private function syncoffers($newEls)
     {
 
+//        $els = \Bitrix\Iblock\ElementTable::getList([
+//            'filter' => ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN],
+//            'select' => ['ID', 'XML_ID', 'CODE']
+//        ])->fetchAll();
+
+        $elsDB = \CIBlockElement::GetList(
+            false,
+            ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN],
+            false,
+            false,
+            ['ID', 'NAME', 'IBLOCK_ID', 'XML_ID', 'PROPERTY_CML2_LINK', 'CODE']
+        );
+
+        while ($el = $elsDB->fetch()) {
+            $els[$el['CODE']] = $el;
+        }
+
+
+        $existingElsDB = \Bitrix\Iblock\ElementTable::getList([
+            'filter' => ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT],
+            'select' => ['ID', 'XML_ID', 'CODE']
+        ]);
+
+        while ($existingEl = $existingElsDB->fetch()) {
+            $existingEls[$existingEl['CODE']] = $existingEl;
+        }
+
+        $this->existingElsOffers = $existingEls;
+
+
+        $this->createProps($this->GOODS_TP_IB_ID_IN, $this->GOODS_TP_IB_ID_OUT);
+        $createdCount = 0;
+        $updatedCount = 0;
+        \Bitrix\Main\Diag\Debug::writeToFile(['new els main' => $this->existingElsMain], date("d.m.Y H:i:s"), "local/log.log");
+        \Bitrix\Main\Diag\Debug::writeToFile(['old els main' => $this->oldElsMain], date("d.m.Y H:i:s"), "local/log.log");
+
+        $count = 0;
+        foreach ($els as $key => $el) {
+            \Bitrix\Main\Diag\Debug::writeToFile(['el id id' => $el['ID']], date("d.m.Y H:i:s"), "local/log.log");
+
+            $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
+
+            $fields = $element->GetFields();
+
+            $props = $element->GetProperties();
+            $newEl = new \CIBlockElement();
+            $isThisElExists = isset($existingEls[$el['CODE']]);
+            $allProps = $this->formatPropsForAddingUpdating($props);
+
+            \Bitrix\Main\Diag\Debug::writeToFile(['code 11' => $el['CODE']], date("d.m.Y H:i:s"), "local/log.log");
+
+            if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
+                \Bitrix\Main\Diag\Debug::writeToFile(['cml 2 link slkdjflskdjf' => $allProps['CML2_LINK']], date("d.m.Y H:i:s"), "local/log.log");
+                $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
+            } else if (isset($allProps['CML2_LINK']) && $this->existingElsMain[$el['CODE']]) {
+                \Bitrix\Main\Diag\Debug::writeToFile(['cml 2 link 123123' => $allProps['CML2_LINK']], date("d.m.Y H:i:s"), "local/log.log");
+                $allProps['CML2_LINK'] = $this->existingElsMain[$el['CODE']]['ID'];
+            }
+
+            $newFields = [
+                'IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT,
+                'NAME' => $fields['NAME'],
+                'CODE' => $fields['CODE'],
+                'PROPERTY_VALUES' => $allProps
+            ];
+
+//            $newFields['PROPERTY_VALUES']['CML2_LINK'] = ;
+
+            if ($el['CODE'] == 'strap-rough-skin-kr-s') {
+                \Bitrix\Main\Diag\Debug::writeToFile(
+                    [
+                        'el ' => $el,
+                        'new fields' => $newFields,
+                        ' el id ' => $existingEls[$el['CODE']]['ID'],
+                        'el main ' => $this->existingElsMain[$el['CODE']],
+                        'new el id' => $newEls[$el['CODE']],
+                        'el cml2 link' => $newEls[$el['PROPERTY_CML2_LINK_VALUE']],
+                        'el this is it' => $this->oldElsMain[$el['PROPERTY_CML2_LINK_VALUE']]['CODE']
+                    ],
+                    date("d.m.Y H:i:s"),
+                    "local/log.log"
+                );
+            }
+            if ($isThisElExists) {
+
+                $isUpdated = $newEl->Update(
+                    $existingEls[$el['CODE']]['ID'],
+                    $newFields
+                );
+                if (!$isUpdated) {
+                    $this->logError(['not updated' => $newEl->LAST_ERROR]);
+                    if ($el['CODE'] == 'strap-rough-skin-kr-s') {
+                        \Bitrix\Main\Diag\Debug::writeToFile(['could not update existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/log.log");
+                    }
+                } else {
+                    $updatedCount++;
+                }
+                if ($el['CODE'] == 'strap-rough-skin-kr-s') {
+                    \Bitrix\Main\Diag\Debug::writeToFile(['updated existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/log.log");
+                }
+            } else {
+                $id = $newEl->Add(
+                    $newFields
+                );
+                if ($id === false) {
+                    $this->logError(['not created ' => $newEl->LAST_ERROR]);
+                    if ($el['CODE'] == 'strap-rough-skin-kr-s') {
+                        \Bitrix\Main\Diag\Debug::writeToFile(['could not add existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/log.log");
+                    }
+                } else {
+                    if ($el['CODE'] == 'strap-rough-skin-kr-s') {
+                        \Bitrix\Main\Diag\Debug::writeToFile(['added existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/log.log");
+                    }
+                    $createdCount++;
+
+                }
+            }
+            $count++;
+        }
+
+
+        $this->logProcess(['created' => $createdCount, ' updated' => $updatedCount]);
     }
 
 }
