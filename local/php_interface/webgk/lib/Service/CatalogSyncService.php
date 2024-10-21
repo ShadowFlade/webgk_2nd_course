@@ -20,6 +20,7 @@ class CatalogSyncService
     private $existingElsOffers;
     private $PROCESS_LOG = '/local/logs/catalog_syn/process.log';
     private $ERROR_LOG = '/local/logs/catalog_syn/error.log';
+    private $OFFERS_LOG = '/local/logs/catalog_syn/offers.log';
 
     private $PROP_TYPES = [
         'LIST' => ['PROPERTY_TYPE' => 'L', 'USER_TYPE' => ''],
@@ -229,6 +230,11 @@ class CatalogSyncService
 
     }
 
+    private function logOffers($message, $isStart)
+    {
+        $this->log($message, $this->OFFERS_LOG, $isStart);
+    }
+
     private function syncMainCatalog()
     {
         $elsDB = \Bitrix\Iblock\ElementTable::getList([
@@ -310,12 +316,6 @@ class CatalogSyncService
 
     private function syncoffers($newEls)
     {
-
-//        $els = \Bitrix\Iblock\ElementTable::getList([
-//            'filter' => ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN],
-//            'select' => ['ID', 'XML_ID', 'CODE']
-//        ])->fetchAll();
-
         $elsDB = \CIBlockElement::GetList(
             false,
             ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN],
@@ -323,10 +323,18 @@ class CatalogSyncService
             false,
             ['ID', 'NAME', 'IBLOCK_ID', 'XML_ID', 'PROPERTY_CML2_LINK', 'CODE']
         );
+        $offersIds = [];
 
         while ($el = $elsDB->fetch()) {
             $els[$el['CODE']] = $el;
+            $offersIds[] = $el['ID'];
         }
+
+        $products = $this->getProducts($offersIds);
+        $prices = $this->getPrices($offersIds);
+
+        $amountUpdaterCounter = 0;
+        $amountAddedCounter = 0;
 
 
         $existingElsDB = \Bitrix\Iblock\ElementTable::getList([
@@ -339,15 +347,13 @@ class CatalogSyncService
         }
 
         $this->existingElsOffers = $existingEls;
-
-
         $this->createProps($this->GOODS_TP_IB_ID_IN, $this->GOODS_TP_IB_ID_OUT);
         $createdCount = 0;
         $updatedCount = 0;
         \Bitrix\Main\Diag\Debug::writeToFile(['new els main' => $this->existingElsMain], date("d.m.Y H:i:s"), "local/log.log");
         \Bitrix\Main\Diag\Debug::writeToFile(['old els main' => $this->oldElsMain], date("d.m.Y H:i:s"), "local/log.log");
-
         $count = 0;
+
         foreach ($els as $key => $el) {
             \Bitrix\Main\Diag\Debug::writeToFile(['el id id' => $el['ID']], date("d.m.Y H:i:s"), "local/log.log");
 
@@ -377,7 +383,6 @@ class CatalogSyncService
                 'PROPERTY_VALUES' => $allProps
             ];
 
-//            $newFields['PROPERTY_VALUES']['CML2_LINK'] = ;
 
             if ($el['CODE'] == 'strap-rough-skin-kr-s') {
                 \Bitrix\Main\Diag\Debug::writeToFile(
@@ -395,11 +400,11 @@ class CatalogSyncService
                 );
             }
             if ($isThisElExists) {
-
                 $isUpdated = $newEl->Update(
                     $existingEls[$el['CODE']]['ID'],
                     $newFields
                 );
+
                 if (!$isUpdated) {
                     $this->logError(['not updated' => $newEl->LAST_ERROR]);
                     if ($el['CODE'] == 'strap-rough-skin-kr-s') {
@@ -428,11 +433,107 @@ class CatalogSyncService
 
                 }
             }
-            $count++;
+            $this->addUpdateProduct($el['ID'], $products);
+
+            if ($price = $prices[$el["ID"]]) {
+                $this->updatePrice($price["ID"], $el["NEW_PRICE"]);
+            } else {
+                $this->addPrice($el["ID"], $el["NEW_PRICE"]);
+            }
         }
 
 
         $this->logProcess(['created' => $createdCount, ' updated' => $updatedCount]);
+    }
+
+    private function addUpdateProduct($elementId, $products, $existingProducts)
+    {
+
+        $errCollection = [];
+
+        if ($product = $existingProducts[$elementId]) {
+            $newProduct = $products[$elementId];
+            $storeResult = \Bitrix\Catalog\StoreProductTable::update($product['ID'], $newProduct);
+
+            if (!$storeResult->isSuccess()) {
+                $errCollection = $storeResult->getErrors();
+            }
+
+        } else {
+            $newProduct = $products[$elementId];
+            $storeResult = \Bitrix\Catalog\StoreProductTable::add(
+                array_merge($newProduct, ['PRODUCT_ID' => $elementId])
+            );
+
+            if (!$storeResult->isSuccess()) {
+                $errCollection = $storeResult->getErrors();
+            }
+
+        }
+        return ['ERRORS' => $errCollection];
+    }
+
+    private function getProducts($offersIds)
+    {
+        $storeFilter = [
+            "PRODUCT_ID" => $offersIds,
+        ];
+        $storeSelect = ["ID", "PRODUCT_ID", "AMOUNT", "STORE_ID"];
+        $storeIterator = \Bitrix\Catalog\StoreProductTable::getList([
+            "filter" => $storeFilter,
+            "select" => $storeSelect
+        ]);
+
+        $products = [];
+        while ($product = $storeIterator->fetch()) {
+            $products[$product['PRODUCT_ID']] = $product;
+        }
+        return $products;
+    }
+
+    private function updatePrice($priceId, $newPrice)
+    {
+        $errCollection = [];
+        $priceResult = \Bitrix\Catalog\PriceTable::update($priceId, [
+            'PRICE' => $newPrice,
+        ]);
+        if (!$priceResult->isSuccess()) {
+            $errCollection = $priceResult->getErrors();
+            return ['ERRORS' => $errCollection];
+        }
+    }
+
+    private function addPrice($priceId, $newPrice)
+    {
+        $errCollection = [];
+        $priceResult = \Bitrix\Catalog\PriceTable::add([
+            'CATALOG_GROUP_ID' => self::PRICE_ID,
+            'PRODUCT_ID' => $productId,
+            'PRICE' => $price,
+            'PRICE_SCALE' => $price,
+            'CURRENCY' => "RUB",
+        ]);
+
+        if(!$priceResult->isSuccess()) {
+            $errCollection = $priceResult->getErrors();
+        }
+    }
+
+    public static function getPrices($offersIds)
+    {
+        $priceFilter = ["PRODUCT_ID" => $offersIds];
+        $priceSelect = ["ID" ,"PRODUCT_ID"];
+        $priceIterator = \Bitrix\Catalog\PriceTable::getList([
+            "filter"=> $priceFilter,
+            "select" => $priceSelect
+        ]);
+        //получаем наличие на складах товаров
+        $productPrices = [];
+        while ($store = $priceIterator->fetch()) {
+            $productPrices[$store["PRODUCT_ID"]] = $store;
+        }
+
+        return $productPrices;
     }
 
 }
