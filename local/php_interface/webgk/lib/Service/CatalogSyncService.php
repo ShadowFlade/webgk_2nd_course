@@ -463,20 +463,28 @@ class CatalogSyncService
     {
 
         $errCollection = [];
-        \Bitrix\Main\Diag\Debug::writeToFile(
-            [
-                'new product' => $existingProducts,
-                'PRODUCT_ID' => $elementId,
-                'products' => $products,
-                '$newOfferId' => $newOfferId
-            ],
-            date("d.m.Y H:i:s"), "local/adding_new_product.log");
+
 
 
         if ($product = $existingOffersProductIdToProductIdTableMap[$newOfferId]) {
 
             foreach ($product as $productTableId) {
-                $newProduct = $existingProducts[$productTableId];
+
+                $newProduct = $products[$elementId];
+                \Bitrix\Main\Diag\Debug::writeToFile(
+                    [
+                        'updating hehaha',
+                        '$existingOffersProductIdToProductIdTableMap' =>$existingOffersProductIdToProductIdTableMap,
+                        '$productTableId'=>$productTableId,
+                        '$existingProducts'=>$existingProducts,
+                        'new product 111' => $newProduct,
+                        'PRODUCT_ID' => $elementId,
+                        'products' => $products,
+                        '$newOfferId' => $newOfferId
+                    ],
+                    date("d.m.Y H:i:s"),
+                    "local/adding_new_product.log"
+                );
                 if ($newProduct['PRODUCT_ID'] == 981) {
                     \Bitrix\Main\Diag\Debug::writeToFile(
                         [
@@ -487,12 +495,14 @@ class CatalogSyncService
                         "local/elel.log"
                     );
                 }
+                unset($newProduct['ID']);
+                $newProduct['PRODUCT_ID'] = $newOfferId;
                 $storeResult = \Bitrix\Catalog\StoreProductTable::update($productTableId, $newProduct);
 
                 if (!$storeResult->isSuccess()) {
                     $errCollection = $storeResult->getErrors();
                 } else {
-                    $updated = $product['ID'];
+                    $updated = $productTableId;
                     $action = 'UPDATED';
                     $updatedCount++;
                 }
