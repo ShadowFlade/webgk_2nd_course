@@ -3,10 +3,9 @@
 namespace Webgk\Service\CatalogSync;
 
 use Bitrix\Catalog\PriceTable;
+use Bitrix\Catalog\StoreProductTable;
 use Bitrix\Iblock\PropertyTable;
-use Bitrix\Main\Application;
-use Bitrix\Main\IO;
-use Bitrix\Sale\StoreProductTable;
+
 
 class CatalogSyncService
 {
@@ -57,13 +56,11 @@ class CatalogSyncService
         while ($existingProp = $existingPropsInNewCatalogDB->fetch()) {
             $existingProps[$existingProp['CODE']] = $existingProp;
         }
-        \Bitrix\Main\Diag\Debug::writeToFile($existingProps, date("d.m.Y H:i:s"), "local/log1.log");
 
 
         while ($prop = $propsDB->GetNext()) {
             $props[] = $prop;
         }
-        \Bitrix\Main\Diag\Debug::writeToFile(['all props' => $props], date("d.m.Y H:i:s"), "local/log1.log");
 
 
         if (empty($props)) {
@@ -219,28 +216,37 @@ class CatalogSyncService
         while ($el = $elsDB->fetch()) {
             $els[$el['ID']] = $el;
         }
-        \Bitrix\Main\Diag\Debug::writeToFile(['olds els in ' => $els], date("d.m.Y H:i:s"), "local/log.log");
 
         $existingElsDB = \Bitrix\Iblock\ElementTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT],
             'select' => ['ID', 'XML_ID', 'CODE']
         ]);
 
+        $existingElementsIds = [];
         while ($existingEl = $existingElsDB->fetch()) {
             $existingEls[$existingEl['CODE']] = $existingEl;
+            $existingElementsIds[] = $existingEl['ID'];
         }
-        $this->oldElsMain = $els;
-        $this->existingElsMain = $existingEls;
-        \Bitrix\Main\Diag\Debug::writeToFile($existingEls, date("d.m.Y H:i:s"), "local/log.log");
 
+        $this->existingElsMain = $existingEls;
+
+        $products = $this->getProducts(array_keys($els));
+        $existingProducts = $this->getProducts($existingElementsIds);
 
         $this->createProps($this->GOODS_IB_ID_IN, $this->GOODS_IB_ID_OUT);
         $createdCount = 0;
         $updatedCount = 0;
 
         $newEls = [];
+        \Bitrix\Main\Diag\Debug::writeToFile([
+            'products' => $products,
+            'existingProducts' => $existingProducts,
+        ], date("d.m.Y H:i:s"), "local/maincatalog.log");
+        $productType = \Bitrix\Catalog\ProductTable::TYPE_SKU;
 
         foreach ($els as $el) {
+            \Bitrix\Main\Diag\Debug::writeToFile(['id ' => $el['ID'], 'code' => $el['CODE']], date("d.m.Y H:i:s"), "local/maincatalog.log");
+
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
             $fields = $element->GetFields();
 
@@ -262,9 +268,16 @@ class CatalogSyncService
                     $newFields
                 );
                 if (!$isUpdated) {
-                    $this->logger->logError(['not updated' => $newEl->LAST_ERROR], true);
+                    $this->logger->logError(['not updated ib element' => $newEl->LAST_ERROR], true);
                 } else {
                     $newEls[$el['ID']] = $existingEls[$el['CODE']]['ID'];
+                    $emptyArray = [];
+                    $this->updateProduct(
+                        $existingProducts[$existingEls[$el['CODE']]['ID']],
+                        $existingEls[$el['CODE']]['ID'],
+                        $productType,
+                        $emptyArray,
+                    );
                     $updatedCount++;
                 }
             } else {
@@ -272,23 +285,25 @@ class CatalogSyncService
                     $newFields
                 );
                 if ($id === false) {
-                    $this->logger->logError(['not created ' => $newEl->LAST_ERROR]);
+                    $this->logger->logError(['not created ' => $newEl->LAST_ERROR], true);
 
                 } else {
                     $newEls[$el['CODE']] = $id;
+                    $this->addProduct(
+                        $el,
+                        $id,
+                        $productType);
                     $createdCount++;
-
                 }
             }
         }
 
         $this->logger->logProcess(['created elements count' => $createdCount, ' updated elements count' => $updatedCount]);
-        \Bitrix\Main\Diag\Debug::writeToFile(['new els' => $newEls], date("d.m.Y H:i:s"), "local/log.log");
 
         return $newEls;
     }
 
-    private function syncOffers($newEls)
+    private function syncOffers($newEls) //main flow
     {
         $elsDB = \CIBlockElement::GetList(
             false,
@@ -327,55 +342,33 @@ class CatalogSyncService
         $updatedIBElementIds = [];
         $updatedProductStoreIds = [];
         $addedProductStoreIds = [];
+        $createdProductsIds = [];
+        $updatedProductIds = [];
         $createdPricesIds = [];
         $updatedPricesIds = [];
-
-
-        \Bitrix\Main\Diag\Debug::writeToFile(['new els main' => $this->existingElsMain], date("d.m.Y H:i:s"), "local/log.log");
-        \Bitrix\Main\Diag\Debug::writeToFile(['old els main' => $this->oldElsMain], date("d.m.Y H:i:s"), "local/log.log");
-        $count = 0;
+        $productType = \Bitrix\Catalog\ProductTable::TYPE_OFFER;
 
         foreach ($els as $key => $el) {
-            \Bitrix\Main\Diag\Debug::writeToFile(['el id id' => $el['ID']], date("d.m.Y H:i:s"), "local/log.log");
 
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
             $fields = $element->GetFields();
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
             $allProps = $this->formatPropsForAddingUpdating($props);
-            \Bitrix\Main\Diag\Debug::writeToFile(['code 11' => $el['CODE']], date("d.m.Y H:i:s"), "local/log.log");
 
             if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
-                \Bitrix\Main\Diag\Debug::writeToFile(['cml 2 link slkdjflskdjf' => $allProps['CML2_LINK']], date("d.m.Y H:i:s"), "local/log.log");
                 $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
             } else if (isset($allProps['CML2_LINK']) && $this->existingElsMain[$el['CODE']]) {
-                \Bitrix\Main\Diag\Debug::writeToFile(['cml 2 link 123123' => $allProps['CML2_LINK']], date("d.m.Y H:i:s"), "local/log.log");
                 $allProps['CML2_LINK'] = $this->existingElsMain[$el['CODE']]['ID'];
             }
 
-            if ($count == 0) {
-                \Bitrix\Main\Diag\Debug::writeToFile($fields, date("d.m.Y H:i:s"), "local/fields.log");
-            }
 
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
                 'CODE' => $fields['CODE'],
                 'PROPERTY_VALUES' => $allProps,
-                'AVAILABLE' => $fields['AVAILABLE'],
             ];
-
-            if ($el['CODE'] == 'pants-striped-flight-f-l') {
-                \Bitrix\Main\Diag\Debug::writeToFile(
-                    [
-                        'el' => $el,
-                        ' el id ' => $existingEls[$el['CODE']]['ID'],
-
-                    ],
-                    date("d.m.Y H:i:s"),
-                    "local/elel.log"
-                );
-            }
 
             $offerResult = $this->addUpdateIBCatalogElementOffer(
                 $el,
@@ -385,48 +378,58 @@ class CatalogSyncService
                 $updatedIBElementIds,
                 $createdIBElementIds
             );
+            if ($el['ID'] == 43) {
+                \Bitrix\Main\Diag\Debug::writeToFile([
+                    'offer result' => $offerResult,
+                    'el ' => $el,
+                    '$newFields' => $newFields,
+                    '$updatedIBElementIds' => $updatedIBElementIds,
+                    '$createdIBElementIds' => $createdIBElementIds,
+                    '$existingProducts' => $existingProducts
+                ], date("d.m.Y H:i:s"), "local/offerresult.log");
+            }
 
-            $productResult = $this->addUpdateProduct(
-                $el['ID'],
-                $products,
-                $existingProducts,
-                $updatedCountProducts,
-                $createdCountProducts,
-                $offerResult['ID']
-            );
 
-            if ($productResult['ACTION'] == 'CREATED' && empty($productResult['ERRORS'])) {//TODO move such shit to complex logging
-                $createdProductsIds[] = $productResult['ID'];
-                $this->addProductStore($el['ID'], $addedProductStoreIds);
+            if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
+                $createdProductsIds[] = $offerResult['ID'];
+                $this->addProduct($products[$el['ID']], $offerResult['ID'], $productType, $createdProductsIds,);
+                $this->addProductStore($el['ID'], $offerResult['ID'], $addedProductStoreIds,);
 
-            } else if ($productResult['ACTION'] == 'UPDATED' && empty($productResult['ERRORS'])) {
-                $updatedProductsIds[] = $productResult['ID'];
+            } else if ($offerResult['ACTION'] == 'UPDATED' && empty($offerResult['ERRORS'])) {
+                $updatedProductIds[] = $offerResult['ID'];
+                $this->updateProduct(
+                    $existingProducts[$offerResult['ID']],
+                    $offerResult['ID'],
+                    $productType,
+                    $updatedProductIds,
+
+                );
                 $this->updateProductStore(
-                    $productResult['ID'],
+                    $offerResult['ID'],
                     $el['ID'],
                     $updatedProductStoreIds,
                 );
             }
 
-            $priceResult = $this->addUpdatePrice(
-                $offerResult['ID'],
-                $existingPrices,
-                $existingProductIdToPriceIdsMap,
-                $prices,
-                $productIdToPriceIdsMap,
-                $el['ID']
-            );
+//            $priceResult = $this->addUpdatePrice(
+//                $offerResult['ID'],
+//                $existingPrices,
+//                $existingProductIdToPriceIdsMap,
+//                $prices,
+//                $productIdToPriceIdsMap,
+//                $el['ID']
+//            );
 
-            if ($priceResult['ACTION'] == 'CREATED' && !empty($priceResult['ID'])) {
-                $createdPricesIds[] = $priceResult['ID'];
-            } else if (!empty($priceResult['ID'])) {
-                $updatedPricesIds[] = $priceResult['ID'];
-            }
+//            if ($priceResult['ACTION'] == 'CREATED' && !empty($priceResult['ID'])) {
+//                $createdPricesIds[] = $priceResult['ID'];
+//            } else if (!empty($priceResult['ID'])) {
+//                $updatedPricesIds[] = $priceResult['ID'];
+//            }
         }
 
         $this->logger->logOffersResults(
             [$createdIBElementIds, $updatedIBElementIds],
-            [$createdProductsIds, $updatedProductsIds],
+            [$createdProductsIds, $updatedProductIds],
             [$createdPricesIds, $updatedPricesIds]
         );
 
@@ -443,11 +446,11 @@ class CatalogSyncService
             $oldEls[$oldEl['STORE_ID']] = $oldEl;
         }
 
-        $newEls = \Bitrix\Catalog\StoreProductTable::getList([
+        $newElsDB = \Bitrix\Catalog\StoreProductTable::getList([
             'filter' => ['PRODUCT_ID' => $newProductId],
-        ])->fetchAll();;
+        ]);;
 
-        while ($newEl = $newEls->fetch()) {
+        while ($newEl = $newElsDB->fetch()) {
             $newEls[$newEl['STORE_ID']] = $newEl;
         }
 
@@ -466,14 +469,16 @@ class CatalogSyncService
         return ['ERRORS' => $errCollection];
     }
 
-    private function addProductStore($oldProductId, &$addedProductStoreIds)
+    private function addProductStore($oldProductId, $newOfferId, &$addedProductStoreIds)
     {
+        $errCollection = [];
         $oldEls = \Bitrix\Catalog\StoreProductTable::getList([
             'filter' => ['PRODUCT_ID' => $oldProductId],
         ])->fetchAll();
 
         foreach ($oldEls as $el) {
-            $addRes = StoreProductTable::add($el);
+            unset($el['ID']);
+            $addRes = \Bitrix\Catalog\StoreProductTable::add(array_merge($el, ['PRODUCT_ID' => $newOfferId]));
 
             if ($addRes->isSuccess()) {
                 $addedProductStoreIds[] = $addRes->getId();
@@ -482,79 +487,60 @@ class CatalogSyncService
                 $errCollection[$el['ID']][] = $errMessage;
             }
         }
-
-
+        !empty($errCollection) ? $this->logger->logError($errCollection) : false;
         return ['ERRORS' => $errCollection];
     }
 
-    private function addUpdateProduct(
-        $elementId,
-        $products,
-        $existingProducts,
-        &$updatedCount,
-        &$createdCount,
-        $newOfferId
-    )
+    private function addProduct(array $newProduct, int $newOfferId, int $type, array &$addedProductStoreIds = [])
     {
-        $errCollection = [];
 
-        if ($product = $existingProducts[$newOfferId]) {
-            $newProduct = $products[$elementId];
-            unset($newProduct['ID']);
-            $storeResult = \Bitrix\Catalog\ProductTable::update(
-                $product['ID'],
-                array_merge(
-                    $newProduct,
-                    ['TYPE' => \Bitrix\Catalog\ProductTable::TYPE_SKU]
-                )
-            );
+        $storeResult = \Bitrix\Catalog\ProductTable::add(
+            array_merge(
+                $newProduct,
+                ['TYPE' => $type],
+                ['ID' => $newOfferId]
+            )
+        );
 
-            if (!$storeResult->isSuccess()) {
-                $errCollection = $storeResult->getErrors();
-            } else {
-                $updated = $product['ID'];
-                $action = 'UPDATED';
-                $updatedCount++;
-            }
+
+        if (!$storeResult->isSuccess()) {
+            $errCollection = $storeResult->getErrors();
         } else {
-            $newProduct = $products[$elementId];
-            if (!$newProduct) {
-                $error = "Could not create product with element ID = $elementId";
-                $this->logger->logError($error);
-                return [
-                    'ERRORS' => $error,
-                    'ID' => false,
-                    'ACTION' => false
-                ];
-            }
-            unset($newProduct['ID']);
-
-            $storeResult = \Bitrix\Catalog\ProductTable::add(
-                array_merge(
-                    $newProduct,
-                    ['TYPE' => \Bitrix\Catalog\ProductTable::TYPE_SKU]
-                )
-            );
-
-
-            if (!$storeResult->isSuccess()) {
-                $errCollection = $storeResult->getErrors();
-            } else {
-                $action = 'CREATED';
-                $createdCount++;
-            }
+            $action = 'CREATED';
+            $addedProductStoreIds[] = $storeResult->getId();
         }
 
-        $this->setQuantityByProduct($elementId);//by product id
-
-        return [
-            'ERRORS' => $errCollection,
-            'ID' => $updated ?: $storeResult->getId(),
-            'ACTION' => $action
-        ];
+        return ['ERRORS' => $errCollection, 'ACTION' => $action, 'ID' => $storeResult->getId()];
     }
 
-    private function getProducts($offersIds)
+    private
+    function updateProduct(array $newProduct, int $newOfferId, int $type, &$updateProductIds,)
+    {
+        if (empty($newProduct)) {
+            $err = "No new product to update with id: {$newProduct['ID']} : {$newOfferId}";
+            $this->logger->logError($err);
+            return $err;
+        }
+        unset($newProduct['ID']);
+        $storeResult = \Bitrix\Catalog\ProductTable::update(
+            $newOfferId,
+            array_merge(
+                $newProduct,
+                ['TYPE' => $type]
+            )
+        );
+
+        if (!$storeResult->isSuccess()) {
+            $errCollection = $storeResult->getErrors();
+        } else {
+            $updateProductIds[] = $storeResult->getId();
+        }
+
+        return ['ERRORS' => $errCollection, 'ID' => $storeResult->getId()];
+    }
+
+    private
+    function getProducts($offersIds)
     {
         if (empty($offersIds)) {
             return [];
@@ -563,10 +549,8 @@ class CatalogSyncService
             "ID" => $offersIds,
         ];
 
-        $storeSelect = ["ID", "AMOUNT", "STORE_ID"];
         $storeIterator = \Bitrix\Catalog\ProductTable::getList([
             "filter" => $storeFilter,
-            "select" => $storeSelect
         ]);
 
         $products = [];
@@ -578,7 +562,8 @@ class CatalogSyncService
     }
 
 
-    public function getProductsStores($offersIds)
+    public
+    function getProductsStores($offersIds)
     {
         if (empty($offersIds)) {
             return [];
@@ -603,7 +588,8 @@ class CatalogSyncService
         return [$products, $productIdToProductTableIds];
     }
 
-    private function getPrices($offersIds)
+    private
+    function getPrices($offersIds)
     {
         if (empty($offersIds)) {
             return [];
@@ -625,7 +611,8 @@ class CatalogSyncService
         return [$productPrices, $productIdToPriceIdsMap];
     }
 
-    private function addUpdatePrice(
+    private
+    function addUpdatePrice(
         int   $productId,
         array $existingPrices,
         array $existingProductIdToPriceIdsMap,
@@ -652,33 +639,9 @@ class CatalogSyncService
                 }
             }
 
-            \Bitrix\Main\Diag\Debug::writeToFile(
-                [
-                    'updating',
-                    '$prices' => $prices,
-                    'new prices' => $newPrices,
-                    '$existingPrices' => $existingPrices,
-                    '$productId' => $productId
-                ],
-                date("d.m.Y H:i:s"),
-                "local/prices.log");
-
 
         } else {
             $newPricePrices = $newPrices[$oldProductId];
-            \Bitrix\Main\Diag\Debug::writeToFile(
-                [
-                    'adding',
-                    '$prices' => $newPricePrices,
-                    'new prices' => $newPrices,
-                    '$newPricePrices' => $newPricePrices,
-                    '$productId' => $productId,
-                    '$oldProductId' => $oldProductId
-                ],
-                date("d.m.Y H:i:s"),
-                "local/prices.log"
-            );
-
             foreach ($newPricePrices as $newPrice) {
 
                 if (empty($newPrice)) {
@@ -702,10 +665,20 @@ class CatalogSyncService
         return ['ID' => $id, 'ACTION' => $action];
     }
 
-    private function addUpdateIBCatalogElementOffer($el, $newEl, $existingEls, $newFields, &$updatedCount, &$createdCount)
+    private function addUpdateIBCatalogElementOffer
+    (
+        $el,
+        $newEl,
+        $existingEls,
+        $newFields,
+        &$updatedCount,
+        &$createdCount
+    )
     {
         $isThisElExists = isset($existingEls[$el['CODE']]);
         $isSuccess = false;
+        $errCollection = [];
+        $action = '';
         if ($isThisElExists) {
 
             $isUpdated = $newEl->Update(
@@ -715,40 +688,34 @@ class CatalogSyncService
             $id = $existingEls[$el['CODE']]['ID'];
 
             if (!$isUpdated) {
-                $this->logger->logError(['not updated offer' => $newEl->LAST_ERROR]);
-                if ($el['CODE'] == 'pants-striped-flight-f-l') {
-                    \Bitrix\Main\Diag\Debug::writeToFile(['could not update existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/elel.log");
-                }
+                $err = $newEl->LAST_ERROR;
+                $errCollection[] = $err;
+                $this->logger->logError(['not updated offer' => $err]);
+
             } else {
                 $isSuccess = true;
                 $updatedCount[] = $existingEls[$el['CODE']]['ID'];
+                $action = 'UPDATED';
             }
-            if ($el['CODE'] == 'pants-striped-flight-f-l') {
-                \Bitrix\Main\Diag\Debug::writeToFile(['updated existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/elel.log");
-            }
+
         } else {
             $id = $newEl->Add(
                 $newFields
             );
 
             if ($id === false) {
-                $this->logger->logError(['not created  offer' => $newEl->LAST_ERROR]);
-                if ($el['CODE'] == 'pants-striped-flight-f-l') {
-                    \Bitrix\Main\Diag\Debug::writeToFile([
-                        'could not add existed el' => $newFields,
-                        ' el id ' => $existingEls[$el['CODE']]['ID']
-                    ], date("d.m.Y H:i:s"), "local/elel.log");
-                }
+                $err = $newEl->LAST_ERROR;
+                $errCollection[] = $err;
+                $this->logger->logError(['not created  offer' => $err]);
             } else {
-                if ($el['CODE'] == 'pants-striped-flight-f-l') {
-                    \Bitrix\Main\Diag\Debug::writeToFile(['added existed el' => $newFields, ' el id ' => $existingEls[$el['CODE']]['ID']], date("d.m.Y H:i:s"), "local/elel.log");
-                }
+
                 $isSuccess = true;
                 $createdCount[] = $id;
+                $action = 'CREATED';
 
             }
         }
-        return ['IS_SUCCESS' => $isSuccess, 'ID' => $id];
+        return ['IS_SUCCESS' => $isSuccess, 'ID' => $id, 'ACTION' => $action, 'ERRORS' => $errCollection];
     }
 
     /**
@@ -758,7 +725,8 @@ class CatalogSyncService
      * @param $productId
      *
      */
-    private function setQuantityByProduct($productId)
+    private
+    function setQuantityByProduct($productId)
     {
         if (intval($productId) < 0) return;
         $iterator = (new \Bitrix\Main\ORM\Query\Query(\Bitrix\Catalog\ProductTable::getEntity()))
