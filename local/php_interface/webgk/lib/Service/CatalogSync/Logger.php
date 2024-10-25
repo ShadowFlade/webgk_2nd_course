@@ -9,6 +9,7 @@ class Logger
     private $PROCESS_LOG = '/local/logs/catalog_syn/process.log';
     private $ERROR_LOG = '/local/logs/catalog_syn/error.log';
     private $OFFERS_LOG = '/local/logs/catalog_syn/offers.log';
+    private $PROPS_LOG = '/local/logs/catalog_syn/props.log';
 
     public function __construct()
     {
@@ -40,9 +41,13 @@ class Logger
         $this->log($message, $this->OFFERS_LOG, $isStart);
     }
 
+    public function logProperties($message, $isStart = false)
+    {
+        $this->log($message, $this->PROPS_LOG, $isStart);
+    }
+
     public function logOffersResults($offersResult, $productsResult, $pricesResult)
     {
-
         $offersCreatedCount = count($offersResult[0]);
         $offersCreated = implode(", ", $offersResult[0]);
         $offersUpdatedCount = count($offersResult[1]);

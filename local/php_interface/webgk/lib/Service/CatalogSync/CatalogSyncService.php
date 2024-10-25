@@ -46,20 +46,22 @@ class CatalogSyncService
         $this->syncOffers($newEls);
     }
 
-    public function createProps($ibIn, $ibOut)
+    public function createProps(int $ibIn, int $ibOut, string $iblock)
     {
         $propsCount = [];
-
         $propsDB = \CIBlockProperty::GetList([], ["IBLOCK_ID" => $ibIn]);
-        $existingPropsInNewCatalogDB = PropertyTable::getList(['filter' => ['IBLOCK_ID' => $ibOut], 'select' => ['NAME', 'ID', 'CODE']]);
-
-        while ($existingProp = $existingPropsInNewCatalogDB->fetch()) {
-            $existingProps[$existingProp['CODE']] = $existingProp;
-        }
-
 
         while ($prop = $propsDB->GetNext()) {
             $props[] = $prop;
+        }
+
+        $existingPropsInNewCatalogDB = PropertyTable::getList([
+                'filter' => ['IBLOCK_ID' => $ibOut],
+                'select' => ['NAME', 'ID', 'CODE']]
+        );
+
+        while ($existingProp = $existingPropsInNewCatalogDB->fetch()) {
+            $existingProps[$existingProp['CODE']] = $existingProp;
         }
 
 
@@ -79,21 +81,22 @@ class CatalogSyncService
             unset($prop['ID']);
             unset($prop['TMP_ID']);
 
-
             if ($prop['PROPERTY_TYPE'] == 'L' && empty($prop['USER_TYPE'])) {//creating property of type list
-                $listProp = $this->createListProp($prop);
+                $listProp = $this->createListProp($prop, $ibOut);
+
                 $id = $newProp->Add($listProp);
 
 
                 if (!$id) {
                     global $APPLICATION;
-                    $APPLICATION->ThrowException($id->LAST_ERROR, ' Ошибка при создании свойства типа список');
+                    $err = $id->LAST_ERROR . ' Ошибка при создании свойства типа список';
+                    $this->logger->logError($err);
+                    $APPLICATION->ThrowException($err);
                 }
                 $propsCount[] = [$prop['CODE']];
 
             } else if ($prop['PROPERTY_TYPE'] == 'N') {//скипаем создание свойства типа integer потому что в нашем каталоге не будет такого типа и мне лень проверять работает он так или нет
                 $propsSkipped[] = [$prop['CODE']];
-
                 continue;
             } else { //creating property of type string or file or catalogue
                 $newPropFields = [
@@ -119,7 +122,9 @@ class CatalogSyncService
 
                 if (!$id) {
                     global $APPLICATION;
-                    $APPLICATION->ThrowException($id->LAST_ERROR . '; [custom webgk message] Ошибка при создании свойства типа строка, файл или справочник');
+                    $err = $id->LAST_ERROR . '; [custom webgk message] Ошибка при создании свойства типа строка, файл или справочник';
+                    $this->logger->logError($err);
+                    $APPLICATION->ThrowException($err);
                 }
                 $propsCount[] = $prop['CODE'];
 
@@ -127,10 +132,10 @@ class CatalogSyncService
 
             $this->logger->logProcess(
                 [
-                    'props created' => $propsCount,
-                    'props created count' => count($propsCount),
-                    'props skipped' => $propsSkipped,
-                    'props skipped count' => count($propsSkipped),
+                    "props created $iblock" => $propsCount,
+                    "props created count $iblock" => count($propsCount),
+                    "props skipped $iblock" => $propsSkipped,
+                    "props skipped count $iblock" => count($propsSkipped),
                 ],
                 true,
             );
@@ -157,8 +162,9 @@ class CatalogSyncService
         return [$propsDeleted, $propsErrors];
     }
 
-    private function formatPropsForAddingUpdating($props)
+    private function formatPropsForAddingUpdating($props, $ibOut)
     {
+
         $allProps = [];
         foreach ($props as $prop) {
 
@@ -171,6 +177,10 @@ class CatalogSyncService
                     $propertyValues[] = $propValNew;
                 }
 
+            } else if ($prop['PROPERTY_TYPE'] == 'L') {
+                [$_, $listValueToIdMap] = $this->getListProp($prop['ID'], $ibOut);
+                $propValNew = $listValueToIdMap[$prop['VALUE']];
+                $propertyValues = $propValNew;
             } else {
                 $propertyValues = $prop['VALUE'];
             }
@@ -180,30 +190,48 @@ class CatalogSyncService
         return $allProps;
     }
 
-    private function createListProp($fields)
+    private function createListProp($fields, $ib)
     {
         $newFields = [
             'NAME' => $fields['NAME'],
             'ACTIVE' => $fields['ACTIVE'],
             'SORT' => $fields['PROPERTY_SORT'] ?? $fields['SORT'],
             'CODE' => $fields['CODE'],
-            'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
+            'IBLOCK_ID' => $ib,
             'PROPERTY_TYPE' => $fields['PROPERTY_TYPE'],
             'USER_TYPE' => $fields['USER_TYPE'],
             'USER_TYPE_SETTINGS' => $fields['USER_TYPE_SETTINGS'],
             'MULTIPLE' => $fields['MULTIPLE'],
         ];
-        $propVariants = \CIBlockPropertyEnum::GetList([], ["IBLOCK_ID" => $fields['IBLOCK_ID'], "CODE" => $fields['CODE']]);
-        while ($variant = $propVariants->GetNext()) {
+        [$listPropValues] = $this->getListProp($fields['IBLOCK_ID'], $fields['IBLOCK_ID']);
+        $newFields['VALUES'] = $listPropValues;
+        \Bitrix\Main\Diag\Debug::writeToFile($newFields, date("d.m.Y H:i:s"), "local/creatingprops12.log");
+        return $newFields;
+    }
+
+    private function getListProp($idOrCode, $ibOut)
+    {
+        $propVariants = \CIBlockProperty::GetPropertyEnum($idOrCode, false, ['IBLOCK_ID' => $ibOut]);
+
+        $values = [];
+        $valueToIdMap = [];
+
+        while ($variantDB = $propVariants->GetNext()) {
+            \Bitrix\Main\Diag\Debug::writeToFile($variantDB, date("d.m.Y H:i:s"), "local/logvariant1.log");
+
+            $variant = \CIBlockPropertyEnum::GetByID($variantDB['ID']);
             $propVar = [];
             $propVar['VALUE'] = $variant['VALUE'];
             $propVar['DEF'] = $variant['DEF'];
             $propVar['EXTERNAL_ID'] = $variant['EXTERNAL_ID'];
             $propVar['SORT'] = $variant['PROPERTY_SORT'];
-            $newFields['VALUES'][] = $propVar;
-        }
-        return $newFields;
+            $values[] = $propVar;
+            $valueToIdMap[$variant['VALUE']] = $variant['VALUE_ID'];
+            \Bitrix\Main\Diag\Debug::writeToFile($variant, date("d.m.Y H:i:s"), "local/logvariant.log");
 
+        }
+
+        return [$values, $valueToIdMap];
     }
 
 
@@ -233,15 +261,12 @@ class CatalogSyncService
         $products = $this->getProducts(array_keys($els));
         $existingProducts = $this->getProducts($existingElementsIds);
 
-        $this->createProps($this->GOODS_IB_ID_IN, $this->GOODS_IB_ID_OUT);
+        $this->createProps($this->GOODS_IB_ID_IN, $this->GOODS_IB_ID_OUT, "catalog");
+
         $createdCount = 0;
         $updatedCount = 0;
 
         $newEls = [];
-        \Bitrix\Main\Diag\Debug::writeToFile([
-            'products' => $products,
-            'existingProducts' => $existingProducts,
-        ], date("d.m.Y H:i:s"), "local/maincatalog.log");
         $productType = \Bitrix\Catalog\ProductTable::TYPE_SKU;
 
         foreach ($els as $el) {
@@ -253,7 +278,7 @@ class CatalogSyncService
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
             $isThisElExists = isset($existingEls[$el['CODE']]);
-            $allProps = $this->formatPropsForAddingUpdating($props);
+            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_IN);
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
@@ -336,7 +361,7 @@ class CatalogSyncService
         [$existingPrices, $existingProductIdToPriceIdsMap] = $this->getPrices($existingOfferIds);
 
         $this->existingElsOffers = $existingEls;
-        $this->createProps($this->GOODS_TP_IB_ID_IN, $this->GOODS_TP_IB_ID_OUT);
+        [$_, $valueToIdMapOfListProps] = $this->createProps($this->GOODS_TP_IB_ID_IN, $this->GOODS_TP_IB_ID_OUT, "offers");
 
         $createdIBElementIds = [];
         $updatedIBElementIds = [];
@@ -347,14 +372,20 @@ class CatalogSyncService
         $createdPricesIds = [];
         $updatedPricesIds = [];
         $productType = \Bitrix\Catalog\ProductTable::TYPE_OFFER;
-
+        $count = 0;
         foreach ($els as $key => $el) {
 
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
             $fields = $element->GetFields();
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
-            $allProps = $this->formatPropsForAddingUpdating($props);
+            if ($count == 0) {
+                \Bitrix\Main\Diag\Debug::writeToFile($props, date("d.m.Y H:i:s"), "local/creatingpropsoffersbefore.log");
+            }
+            $allProps = $this->formatPropsForAddingUpdating($props, $ibOut);
+            if ($count == 0) {
+                \Bitrix\Main\Diag\Debug::writeToFile($allProps, date("d.m.Y H:i:s"), "local/creatingpropsoffersafter.log");
+            }
 
             if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
                 $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
@@ -369,6 +400,7 @@ class CatalogSyncService
                 'CODE' => $fields['CODE'],
                 'PROPERTY_VALUES' => $allProps,
             ];
+
 
             $offerResult = $this->addUpdateIBCatalogElementOffer(
                 $el,
@@ -425,6 +457,7 @@ class CatalogSyncService
 //            } else if (!empty($priceResult['ID'])) {
 //                $updatedPricesIds[] = $priceResult['ID'];
 //            }
+            $count++;
         }
 
         $this->logger->logOffersResults(
