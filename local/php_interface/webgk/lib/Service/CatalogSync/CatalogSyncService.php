@@ -40,9 +40,12 @@ class CatalogSyncService
         $this->logger = new Logger();
     }
 
-    public function init()
+    public function init($isStartOver = false)
     {
-        $newEls = $this->syncMainCatalog();//TODO mb create a temp table for this
+//        if ($isStartOver) {
+//            $this->deleteAllIBCatalogElements();
+//        }
+        $newEls = $this->syncMainCatalog();
         $this->syncOffers($newEls);
     }
 
@@ -322,7 +325,7 @@ class CatalogSyncService
                     $this->logger->logError(['not created ' => $newEl->LAST_ERROR], true);
 
                 } else {
-                    $newEls[$el['CODE']] = $id;
+                    $newEls[$el['ID']] = $id;
                     $this->addProduct(
                         $el,
                         $id,
@@ -370,7 +373,10 @@ class CatalogSyncService
         [$existingPrices, $existingProductIdToPriceIdsMap] = $this->getPrices($existingOfferIds);
 
         $this->existingElsOffers = $existingEls;
-        [$_, $valueToIdMapOfListProps] = $this->createProps($this->GOODS_TP_IB_ID_IN, $this->GOODS_TP_IB_ID_OUT, "offers");
+        [$_, $valueToIdMapOfListProps] = $this->createProps(
+            $this->GOODS_TP_IB_ID_IN,
+            $this->GOODS_TP_IB_ID_OUT, "offers"
+        );
 
         $createdIBElementIds = [];
         $updatedIBElementIds = [];
@@ -394,7 +400,13 @@ class CatalogSyncService
 
             if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
                 $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
+                if($count == 0) {
+                    \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/cml2link.log");
+                }
             } else if (isset($allProps['CML2_LINK']) && $this->existingElsMain[$el['CODE']]) {
+                if($count == 0) {
+                    \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/cml2link2.log");
+                }
                 $allProps['CML2_LINK'] = $this->existingElsMain[$el['CODE']]['ID'];
             }
 
@@ -419,7 +431,12 @@ class CatalogSyncService
 
             if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
                 $createdProductsIds[] = $offerResult['ID'];
-                $this->addProduct($products[$el['ID']], $offerResult['ID'], $productType, $createdProductsIds,);
+                $this->addProduct(
+                    $products[$el['ID']],
+                    $offerResult['ID'],
+                    $productType,
+                    $createdProductsIds
+                );
                 $this->addProductStore($el['ID'], $offerResult['ID'], $addedProductStoreIds,);
 
             } else if ($offerResult['ACTION'] == 'UPDATED' && empty($offerResult['ERRORS'])) {
@@ -545,7 +562,7 @@ class CatalogSyncService
     function updateProduct(array $newProduct, int $newOfferId, int $type, &$updateProductIds,)
     {
         \Bitrix\Main\Diag\Debug::writeToFile([
-            $newOfferId,$type,$newProduct
+            $newOfferId, $type, $newProduct
         ], date("d.m.Y H:i:s"), "local/log.log");
 
         if (empty($newProduct)) {
@@ -576,15 +593,12 @@ class CatalogSyncService
         if (empty($offersIds)) {
             return [];
         }
-        $storeFilter = [
-            "ID" => $offersIds,
-        ];
 
         $storeIterator = \Bitrix\Catalog\ProductTable::getList([
-            "filter" => $storeFilter,
+            "filter" => ['ID' => $offersIds],
         ]);
-
         $products = [];
+
         while ($product = $storeIterator->fetch()) {
             $products[$product['ID']] = $product;
         }
@@ -739,7 +753,6 @@ class CatalogSyncService
                 $errCollection[] = $err;
                 $this->logger->logError(['not created  offer' => $err]);
             } else {
-
                 $isSuccess = true;
                 $createdCount[] = $id;
                 $action = 'CREATED';
@@ -784,10 +797,25 @@ class CatalogSyncService
             ]);
         }
     }
+
+//    private function deleteAllIBCatalogElements()
+//    {
+//        $els = \Bitrix\Iblock\ElementTable::getList(
+//            [
+//                'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT],
+//                'select' => ['ID']
+//            ]
+//        )->fetchAll();
+//        foreach ($els as $el) {
+//            \Bitrix\IBlock\ElementTable::delete($el['ID']);
+//        }
+//    }
 }
 
 //TODO
 //1. bug in the created element it creates Костюм Футболка/шорты Smaillook &amp;amp;amp;quot;Зажигаю солнце&amp;amp;amp;quot; малодетский like this (with &amp;)
 //2. make logger
-
+//3. currently bugged:
+//3.1:no linking on creating elements
+//3.2:no more_photos on creating elements
 
