@@ -26,7 +26,7 @@ class CatalogSyncService
         'CATALOGUE' => ['PROPERTY_TYPE' => 'S', 'USER_TYPE' => 'directory'],
         'STRING' => ['PROPERTY_TYPE' => 'S', 'USER_TYPE' => ''],
         'FILE' => ['PROPERTY_TYPE' => 'F', 'USER_TYPE' => ''],
-    ];//those are the types we handle 
+    ];//those are the types we handle
 
     public function __construct($GOODS_IB_ID_IN, $GOODS_TP_IB_ID_IN, $GOODS_IB_ID_OUT, $GOODS_TP_IB_ID_OUT)
     {
@@ -82,7 +82,7 @@ class CatalogSyncService
             unset($prop['TMP_ID']);
 
             if ($prop['PROPERTY_TYPE'] == 'L' && empty($prop['USER_TYPE'])) {//creating property of type list
-                $listProp = $this->createListProp($prop, $ibOut);
+                $listProp = $this->createListProp($prop);
 
                 $id = $newProp->Add($listProp);
 
@@ -178,8 +178,8 @@ class CatalogSyncService
                 }
 
             } else if ($prop['PROPERTY_TYPE'] == 'L') {
-                [$_, $listValueToIdMap] = $this->getListProp($prop['ID'], $ibOut);
-                $propValNew = $listValueToIdMap[$prop['VALUE']];
+                [$_, $enumVariants] = $this->getListPropVariants($prop['CODE'], $ibOut);
+                $propValNew = $enumVariants[$prop['VALUE']]['VALUE_ID'];
                 $propertyValues = $propValNew;
             } else {
                 $propertyValues = $prop['VALUE'];
@@ -190,48 +190,58 @@ class CatalogSyncService
         return $allProps;
     }
 
-    private function createListProp($fields, $ib)
+    private function createListProp($fields)
     {
         $newFields = [
             'NAME' => $fields['NAME'],
             'ACTIVE' => $fields['ACTIVE'],
             'SORT' => $fields['PROPERTY_SORT'] ?? $fields['SORT'],
             'CODE' => $fields['CODE'],
-            'IBLOCK_ID' => $ib,
+            'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
             'PROPERTY_TYPE' => $fields['PROPERTY_TYPE'],
             'USER_TYPE' => $fields['USER_TYPE'],
             'USER_TYPE_SETTINGS' => $fields['USER_TYPE_SETTINGS'],
             'MULTIPLE' => $fields['MULTIPLE'],
         ];
-        [$listPropValues] = $this->getListProp($fields['IBLOCK_ID'], $fields['IBLOCK_ID']);
-        $newFields['VALUES'] = $listPropValues;
-        \Bitrix\Main\Diag\Debug::writeToFile($newFields, date("d.m.Y H:i:s"), "local/creatingprops12.log");
-        return $newFields;
-    }
+        $propVariants = \CIBlockPropertyEnum::GetList([], ["IBLOCK_ID" => $fields['IBLOCK_ID'], "CODE" => $fields['CODE']]);
 
-    private function getListProp($idOrCode, $ibOut)
-    {
-        $propVariants = \CIBlockProperty::GetPropertyEnum($idOrCode, false, ['IBLOCK_ID' => $ibOut]);
-
-        $values = [];
-        $valueToIdMap = [];
-
-        while ($variantDB = $propVariants->GetNext()) {
-            \Bitrix\Main\Diag\Debug::writeToFile($variantDB, date("d.m.Y H:i:s"), "local/logvariant1.log");
-
-            $variant = \CIBlockPropertyEnum::GetByID($variantDB['ID']);
+        while ($variant = $propVariants->GetNext()) {
             $propVar = [];
             $propVar['VALUE'] = $variant['VALUE'];
             $propVar['DEF'] = $variant['DEF'];
             $propVar['EXTERNAL_ID'] = $variant['EXTERNAL_ID'];
             $propVar['SORT'] = $variant['PROPERTY_SORT'];
-            $values[] = $propVar;
-            $valueToIdMap[$variant['VALUE']] = $variant['VALUE_ID'];
-            \Bitrix\Main\Diag\Debug::writeToFile($variant, date("d.m.Y H:i:s"), "local/logvariant.log");
+            $newFields['VALUES'][] = $propVar;
+        }
+        return $newFields;
 
+    }
+
+    private function getListPropVariants($code, $ibOut)
+    {
+        $select = ["IBLOCK_ID", "ID", "CODE", "VALUE" => "ENUM.VALUE", "VALUE_ID" => "ENUM.ID"];
+        $iterator = (new \Bitrix\Main\ORM\Query\Query(\Bitrix\Iblock\PropertyTable::getEntity()))
+            ->setSelect($select)//we dont handle multiples here
+            ->where("CODE", $code)
+            ->where("IBLOCK_ID", $ibOut)
+            ->registerRuntimeField(
+                new \Bitrix\Main\Entity\ReferenceField(
+                    'ENUM',
+                    '\Bitrix\Iblock\PropertyEnumerationTable',
+                    ['=this.ID' => 'ref.PROPERTY_ID'],
+                    ["join_type" => "left"]
+                )
+            )
+            ->exec();
+
+        $values = [];
+        while ($enumVariant = $iterator->fetch()) {
+            $enumVariants[$enumVariant['VALUE']] = $enumVariant;
+            $values[] = $enumVariant['VALUE'];
         }
 
-        return [$values, $valueToIdMap];
+
+        return [$values, $enumVariants];
     }
 
 
@@ -270,7 +280,6 @@ class CatalogSyncService
         $productType = \Bitrix\Catalog\ProductTable::TYPE_SKU;
 
         foreach ($els as $el) {
-            \Bitrix\Main\Diag\Debug::writeToFile(['id ' => $el['ID'], 'code' => $el['CODE']], date("d.m.Y H:i:s"), "local/maincatalog.log");
 
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
             $fields = $element->GetFields();
@@ -278,7 +287,7 @@ class CatalogSyncService
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
             $isThisElExists = isset($existingEls[$el['CODE']]);
-            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_IN);
+            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_OUT);
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
@@ -379,13 +388,9 @@ class CatalogSyncService
             $fields = $element->GetFields();
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
-            if ($count == 0) {
-                \Bitrix\Main\Diag\Debug::writeToFile($props, date("d.m.Y H:i:s"), "local/creatingpropsoffersbefore.log");
-            }
-            $allProps = $this->formatPropsForAddingUpdating($props, $ibOut);
-            if ($count == 0) {
-                \Bitrix\Main\Diag\Debug::writeToFile($allProps, date("d.m.Y H:i:s"), "local/creatingpropsoffersafter.log");
-            }
+
+            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_TP_IB_ID_OUT);
+
 
             if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
                 $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
@@ -410,16 +415,7 @@ class CatalogSyncService
                 $updatedIBElementIds,
                 $createdIBElementIds
             );
-            if ($el['ID'] == 43) {
-                \Bitrix\Main\Diag\Debug::writeToFile([
-                    'offer result' => $offerResult,
-                    'el ' => $el,
-                    '$newFields' => $newFields,
-                    '$updatedIBElementIds' => $updatedIBElementIds,
-                    '$createdIBElementIds' => $createdIBElementIds,
-                    '$existingProducts' => $existingProducts
-                ], date("d.m.Y H:i:s"), "local/offerresult.log");
-            }
+
 
 
             if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
@@ -791,3 +787,5 @@ class CatalogSyncService
 //TODO
 //1. bug in the created element it creates Костюм Футболка/шорты Smaillook &amp;amp;amp;quot;Зажигаю солнце&amp;amp;amp;quot; малодетский like this (with &amp;)
 //2. make logger
+
+
