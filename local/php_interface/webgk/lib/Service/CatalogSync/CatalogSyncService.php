@@ -165,20 +165,29 @@ class CatalogSyncService
         return [$propsDeleted, $propsErrors];
     }
 
-    private function formatPropsForAddingUpdating($props, $ibOut)
+    private function formatPropsForAddingUpdating($props, $ibOut, $newElID = false)
     {
 
         $allProps = [];
         foreach ($props as $prop) {
             $propertyValues = [];
 
-            if (is_array($prop['VALUE'])) {
+            if ($prop['PROPERTY_TYPE'] == 'F') {
+                $filesArr = [];
+
                 foreach ($prop['VALUE'] as $key => $propVal) {
-                    $propValNew = [];
-                    $propValNew['VALUE'] = $propVal;
-                    $propValNew['DESCRIPTION'] = $prop['DESCRIPTION'][$key];
-                    $propertyValues[] = $propValNew;
+                    $fileArr = \CFile::MakeFileArray(\CFile::GetPath($propVal));
+                    $fileArr["MODULE_ID"] = "iblock";
+                    $filesArr[] = $fileArr;
                 }
+
+                \CIBlockElement::SetPropertyValuesEx(
+                    $newElID,
+                    $ibOut,
+                    [$prop['CODE'] => $filesArr]
+                );
+                
+                continue;
 
             } else if ($prop['PROPERTY_TYPE'] == 'L') {
                 [$_, $enumVariants] = $this->getListPropVariants($prop['CODE'], $ibOut);
@@ -191,6 +200,7 @@ class CatalogSyncService
             $allProps[$prop['CODE']] = $propVals;
         }
         return $allProps;
+
     }
 
     private function createListProp($fields)
@@ -395,18 +405,16 @@ class CatalogSyncService
             $props = $element->GetProperties();
             $newEl = new \CIBlockElement();
 
-            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_TP_IB_ID_OUT);
+            $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_TP_IB_ID_OUT,
+                $existingEls[$el['CODE']]['ID']//this is a hack and its not good but will do for now
+            );
 
 
             if (isset($allProps['CML2_LINK']) && $newEls[$el['PROPERTY_CML2_LINK_VALUE']]) {
                 $allProps['CML2_LINK'] = $newEls[$el['PROPERTY_CML2_LINK_VALUE']];
-                if($count == 0) {
-                    \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/cml2link.log");
-                }
+
             } else if (isset($allProps['CML2_LINK']) && $this->existingElsMain[$el['CODE']]) {
-                if($count == 0) {
-                    \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/cml2link2.log");
-                }
+
                 $allProps['CML2_LINK'] = $this->existingElsMain[$el['CODE']]['ID'];
             }
 
@@ -469,8 +477,14 @@ class CatalogSyncService
 //            } else if (!empty($priceResult['ID'])) {
 //                $updatedPricesIds[] = $priceResult['ID'];
 //            }
+            if ($el['ID'] == 43) {
+                \Bitrix\Main\Diag\Debug::writeToFile($allProps, date("d.m.Y H:i:s"), "local/allprops.log");
+
+            }
+
             $count++;
         }
+
 
         $this->logger->logOffersResults(
             [$createdIBElementIds, $updatedIBElementIds],
@@ -561,9 +575,7 @@ class CatalogSyncService
     private
     function updateProduct(array $newProduct, int $newOfferId, int $type, &$updateProductIds,)
     {
-        \Bitrix\Main\Diag\Debug::writeToFile([
-            $newOfferId, $type, $newProduct
-        ], date("d.m.Y H:i:s"), "local/log.log");
+
 
         if (empty($newProduct)) {
             $err = "No new product to update with id: {$newProduct['ID']} : {$newOfferId}";
