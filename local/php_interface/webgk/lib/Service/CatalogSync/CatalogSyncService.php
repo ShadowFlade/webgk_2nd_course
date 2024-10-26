@@ -167,11 +167,11 @@ class CatalogSyncService
 
         $allProps = [];
         foreach ($props as $prop) {
-
             $propertyValues = [];
+
             if (is_array($prop['VALUE'])) {
-                $propValNew = [];
                 foreach ($prop['VALUE'] as $key => $propVal) {
+                    $propValNew = [];
                     $propValNew['VALUE'] = $propVal;
                     $propValNew['DESCRIPTION'] = $prop['DESCRIPTION'][$key];
                     $propertyValues[] = $propValNew;
@@ -288,13 +288,13 @@ class CatalogSyncService
             $newEl = new \CIBlockElement();
             $isThisElExists = isset($existingEls[$el['CODE']]);
             $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_OUT);
+
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
                 'CODE' => $fields['CODE'],
                 'PROPERTY_VALUES' => $allProps
             ];
-
 
             if ($isThisElExists) {
                 $isUpdated = $newEl->Update(
@@ -307,7 +307,7 @@ class CatalogSyncService
                     $newEls[$el['ID']] = $existingEls[$el['CODE']]['ID'];
                     $emptyArray = [];
                     $this->updateProduct(
-                        $existingProducts[$existingEls[$el['CODE']]['ID']],
+                        $products[$el['ID']],
                         $existingEls[$el['CODE']]['ID'],
                         $productType,
                         $emptyArray,
@@ -415,7 +415,6 @@ class CatalogSyncService
                 $updatedIBElementIds,
                 $createdIBElementIds
             );
-
 
 
             if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
@@ -545,6 +544,10 @@ class CatalogSyncService
     private
     function updateProduct(array $newProduct, int $newOfferId, int $type, &$updateProductIds,)
     {
+        \Bitrix\Main\Diag\Debug::writeToFile([
+            $newOfferId,$type,$newProduct
+        ], date("d.m.Y H:i:s"), "local/log.log");
+
         if (empty($newProduct)) {
             $err = "No new product to update with id: {$newProduct['ID']} : {$newOfferId}";
             $this->logger->logError($err);
@@ -568,8 +571,7 @@ class CatalogSyncService
         return ['ERRORS' => $errCollection, 'ID' => $storeResult->getId()];
     }
 
-    private
-    function getProducts($offersIds)
+    private function getProducts($offersIds)
     {
         if (empty($offersIds)) {
             return [];
