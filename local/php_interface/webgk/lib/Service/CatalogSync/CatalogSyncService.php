@@ -14,11 +14,15 @@ class CatalogSyncService
     private $GOODS_IB_ID_OUT;
     private $GOODS_TP_IB_ID_OUT;
     private $app;
-    private $oldElsMain;
 
     private $existingElsMain;
     private $existingElsOffers;
     private $logger;
+
+    //section id in => [section out]
+    private $SECTIONS_IN_IDS = [12, 11, 10, 9, 8, 7, 1];
+
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 23;
 
 
     private $PROP_TYPES = [
@@ -262,7 +266,7 @@ class CatalogSyncService
     {
         $elsDB = \Bitrix\Iblock\ElementTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
-            'select' => ['ID', 'XML_ID', 'CODE']
+            'select' => ['ID', 'XML_ID', 'CODE', 'IBLOCK_SECTION_ID']
         ]);
         while ($el = $elsDB->fetch()) {
             $els[$el['ID']] = $el;
@@ -280,6 +284,9 @@ class CatalogSyncService
         }
 
         $this->existingElsMain = $existingEls;
+
+        $sectionsMap = $this->getSectionsMap();
+
 
         $products = $this->getProducts(array_keys($els));
         $existingProducts = $this->getProducts($existingElementsIds);
@@ -302,11 +309,20 @@ class CatalogSyncService
             $isThisElExists = isset($existingEls[$el['CODE']]);
             $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_OUT);
 
+            if (isset($sectionsMap[$el['IBLOCK_SECTION_ID']])) {
+                $newSectionId = $sectionsMap[$el['IBLOCK_SECTION_ID']]['ID'];
+            } else {
+                $newSectionId = $this->NEW_PRODUCTS_SECTION_ID_OUT;
+            }
+
+
+
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
                 'CODE' => $fields['CODE'],
-                'PROPERTY_VALUES' => $allProps
+                'IBLOCK_SECTION_ID' => $newSectionId,
+                'PROPERTY_VALUES' => $allProps,
             ];
 
             if ($isThisElExists) {
@@ -350,7 +366,8 @@ class CatalogSyncService
         return $newEls;
     }
 
-    private function syncOffers($newEls) //main flow
+    private
+    function syncOffers($newEls) //main flow
     {
         $elsDB = \CIBlockElement::GetList(
             false,
@@ -470,6 +487,8 @@ class CatalogSyncService
                 );
             }
 
+            //TODO mb refactor prices - we have to check them for existence separately from ib elements - if we create them and then delete one price - everything crumbles
+
             $count++;
         }
 
@@ -483,7 +502,8 @@ class CatalogSyncService
 
     }
 
-    private function updateProductStore($newProductId, $oldProductId, &$updatedProductStoreIds)
+    private
+    function updateProductStore($newProductId, $oldProductId, &$updatedProductStoreIds)
     {
         $oldElDB = \Bitrix\Catalog\StoreProductTable::getList([
             'filter' => ['PRODUCT_ID' => $oldProductId],
@@ -516,7 +536,8 @@ class CatalogSyncService
         return ['ERRORS' => $errCollection];
     }
 
-    private function addProductStore($oldProductId, $newOfferId, &$addedProductStoreIds)
+    private
+    function addProductStore($oldProductId, $newOfferId, &$addedProductStoreIds)
     {
         $errCollection = [];
         $oldEls = \Bitrix\Catalog\StoreProductTable::getList([
@@ -538,7 +559,8 @@ class CatalogSyncService
         return ['ERRORS' => $errCollection];
     }
 
-    private function addProduct(array $newProduct, int $newOfferId, int $type, array &$addedProductStoreIds = [])
+    private
+    function addProduct(array $newProduct, int $newOfferId, int $type, array &$addedProductStoreIds = [])
     {
 
         $storeResult = \Bitrix\Catalog\ProductTable::add(
@@ -588,7 +610,8 @@ class CatalogSyncService
         return ['ERRORS' => $errCollection, 'ID' => $storeResult->getId()];
     }
 
-    private function getProducts($offersIds)
+    private
+    function getProducts($offersIds)
     {
         if (empty($offersIds)) {
             return [];
@@ -633,7 +656,8 @@ class CatalogSyncService
         return [$products, $productIdToProductTableIds];
     }
 
-    private function getPrices($offersIds)
+    private
+    function getPrices($offersIds)
     {
         if (empty($offersIds)) {
             return [];
@@ -654,7 +678,8 @@ class CatalogSyncService
         return [$productPrices, $priceIdToProductIdMap];
     }
 
-    private function addPrices(array $prices, int $productId, array &$addedPricesIds)
+    private
+    function addPrices(array $prices, int $productId, array &$addedPricesIds)
     {
         foreach ($prices as $catalogGroupPriceArray) {
             foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
@@ -681,7 +706,8 @@ class CatalogSyncService
         }
     }
 
-    private function updatePrices(
+    private
+    function updatePrices(
         $newPrices,
         $existingPrices,
         $newProductId,
@@ -691,7 +717,6 @@ class CatalogSyncService
 
         foreach ($newPrices as $productId => $catalogGroupPriceArray) {
             foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
-                \Bitrix\Main\Diag\Debug::writeToFile([$existingPrices, $newProductId, $catalogGroupId], date("d.m.Y H:i:s"), "local/priceshah.log");
 
                 $updateRes = \Bitrix\Catalog\PriceTable::update(
                     $existingPrices[$newProductId][$catalogGroupId]['ID'],
@@ -796,24 +821,37 @@ class CatalogSyncService
         }
     }
 
-//    private function deleteAllIBCatalogElements()
-//    {
-//        $els = \Bitrix\Iblock\ElementTable::getList(
-//            [
-//                'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT],
-//                'select' => ['ID']
-//            ]
-//        )->fetchAll();
-//        foreach ($els as $el) {
-//            \Bitrix\IBlock\ElementTable::delete($el['ID']);
-//        }
-//    }
+    private function getSectionsMap()
+    {
+        $sectionsInDB = \Bitrix\Iblock\SectionTable::getList([
+            'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
+            'select' => ['ID', 'CODE', 'IBLOCK_SECTION_ID'],
+            'order' => ['DEPTH_LEVEL' => 'ASC'],
+        ]);
+        $sectionsIn = [];
+        $sectionsOutDB = \Bitrix\Iblock\SectionTable::getList([
+            'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_OUT],
+            'select' => ['ID', 'CODE']
+        ]);
+        $sectionsOut = [];
+        while ($sectionOut = $sectionsOutDB->fetch()) {
+            $sectionsOut[$sectionOut['CODE']] = $sectionOut;
+        }
+
+        while ($sectionIn = $sectionsInDB->fetch()) {
+            if (isset($sectionsIn[$sectionIn['IBLOCK_SECTION_ID']])) {
+                $sectionsIn[$sectionIn['ID']] = $sectionsIn[$sectionIn['IBLOCK_SECTION_ID']];//setting subsections
+                $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionsIn[$sectionIn['ID']]['CODE']]['ID'];
+            } else {
+
+                $sectionsIn[$sectionIn['ID']] = $sectionIn;//setting top level sections
+                $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionIn['CODE']]['ID'];
+            }
+        }
+
+        return $sectionsIn;
+    }
 }
 
 //TODO
 //1. bug in the created element it creates Костюм Футболка/шорты Smaillook &amp;amp;amp;quot;Зажигаю солнце&amp;amp;amp;quot; малодетский like this (with &amp;)
-//2. make logger
-//3. currently bugged:
-//3.1:no linking on creating elements
-//3.2:no more_photos on creating elements
-
