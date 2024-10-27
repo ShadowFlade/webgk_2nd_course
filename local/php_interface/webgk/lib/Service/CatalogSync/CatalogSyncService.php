@@ -186,7 +186,7 @@ class CatalogSyncService
                     $ibOut,
                     [$prop['CODE'] => $filesArr]
                 );
-                
+
                 continue;
 
             } else if ($prop['PROPERTY_TYPE'] == 'L') {
@@ -367,7 +367,7 @@ class CatalogSyncService
         }
 
         $products = $this->getProducts($offersIds);
-        [$prices, $productIdToPriceIdsMap] = $this->getPrices($offersIds);
+        [$prices, $priceIdToProductIdsMap] = $this->getPrices($offersIds);
         $existingElsDB = \Bitrix\Iblock\ElementTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT],
             'select' => ['ID', 'XML_ID', 'CODE']
@@ -380,7 +380,7 @@ class CatalogSyncService
         }
 
         $existingProducts = $this->getProducts($existingOfferIds);
-        [$existingPrices, $existingProductIdToPriceIdsMap] = $this->getPrices($existingOfferIds);
+        [$existingPrices, $existingPriceIdToProductsIdsMap] = $this->getPrices($existingOfferIds);
 
         $this->existingElsOffers = $existingEls;
         [$_, $valueToIdMapOfListProps] = $this->createProps(
@@ -396,6 +396,7 @@ class CatalogSyncService
         $updatedProductIds = [];
         $createdPricesIds = [];
         $updatedPricesIds = [];
+
         $productType = \Bitrix\Catalog\ProductTable::TYPE_OFFER;
         $count = 0;
         foreach ($els as $key => $el) {
@@ -436,7 +437,6 @@ class CatalogSyncService
                 $createdIBElementIds
             );
 
-
             if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
                 $createdProductsIds[] = $offerResult['ID'];
                 $this->addProduct(
@@ -445,7 +445,8 @@ class CatalogSyncService
                     $productType,
                     $createdProductsIds
                 );
-                $this->addProductStore($el['ID'], $offerResult['ID'], $addedProductStoreIds,);
+                $this->addProductStore($el['ID'], $offerResult['ID'], $addedProductStoreIds);
+                $this->addPrices($prices, $offerResult['ID'], $createdPricesIds);
 
             } else if ($offerResult['ACTION'] == 'UPDATED' && empty($offerResult['ERRORS'])) {
                 $updatedProductIds[] = $offerResult['ID'];
@@ -461,25 +462,12 @@ class CatalogSyncService
                     $el['ID'],
                     $updatedProductStoreIds,
                 );
-            }
-
-//            $priceResult = $this->addUpdatePrice(
-//                $offerResult['ID'],
-//                $existingPrices,
-//                $existingProductIdToPriceIdsMap,
-//                $prices,
-//                $productIdToPriceIdsMap,
-//                $el['ID']
-//            );
-
-//            if ($priceResult['ACTION'] == 'CREATED' && !empty($priceResult['ID'])) {
-//                $createdPricesIds[] = $priceResult['ID'];
-//            } else if (!empty($priceResult['ID'])) {
-//                $updatedPricesIds[] = $priceResult['ID'];
-//            }
-            if ($el['ID'] == 43) {
-                \Bitrix\Main\Diag\Debug::writeToFile($allProps, date("d.m.Y H:i:s"), "local/allprops.log");
-
+                $this->updatePrices(
+                    $prices,
+                    $existingPrices,
+                    $offerResult['ID'],
+                    $updatedPricesIds
+                );
             }
 
             $count++;
@@ -645,62 +633,31 @@ class CatalogSyncService
         return [$products, $productIdToProductTableIds];
     }
 
-    private
-    function getPrices($offersIds)
+    private function getPrices($offersIds)
     {
         if (empty($offersIds)) {
             return [];
         }
         $priceFilter = ["PRODUCT_ID" => $offersIds];
-        $priceSelect = ["ID", "PRODUCT_ID", "PRICE"];
         $priceIterator = \Bitrix\Catalog\PriceTable::getList([
             "filter" => $priceFilter,
-            "select" => $priceSelect
         ]);
         //получаем наличие на складах товаров
         $productPrices = [];
-        $productIdToPriceIdsMap = [];
+        $priceIdToProductIdMap = [];
+
         while ($price = $priceIterator->fetch()) {
-            $productPrices[$price["PRODUCT_ID"]][] = $price;
-            $productIdToPriceIdsMap[$price["PRODUCT_ID"]][] = $price['ID'];
+            $productPrices[$price["PRODUCT_ID"]][$price['CATALOG_GROUP_ID']] = $price;
+            $priceIdToProductIdMap[$price["ID"]] = $price['PRODUCT_ID'];
         }
 
-        return [$productPrices, $productIdToPriceIdsMap];
+        return [$productPrices, $priceIdToProductIdMap];
     }
 
-    private
-    function addUpdatePrice(
-        int   $productId,
-        array $existingPrices,
-        array $existingProductIdToPriceIdsMap,
-        array $newPrices,
-        array $productIdToPriceIdsMap,
-        int   $oldProductId
-
-    ): array
+    private function addPrices(array $prices, int $productId, array &$addedPricesIds)
     {
-        if ($prices = $existingPrices[$productId]) {
-            foreach ($prices as $price) {
-                $newPrice = $newPrices[$productId];
-                if (empty($newPrice)) {
-                    $errMessage = 'Price not found: could not update existing price';
-                    $this->logger->logError($errMessage);
-                    $this->app->ThrowException($errMessage);// apparently this does not stop the runtime
-                    return [];
-                }
-                unset($newPrice['ID']);
-                $updateResult = PriceTable::update($price['ID'], array_merge($newPrice, ['PRODUCT_ID' => $price['PRODUCT_ID']]));
-                if ($updateResult->isSuccess()) {
-                    $id = $price['ID'];
-                    $action = 'UPDATED';
-                }
-            }
-
-
-        } else {
-            $newPricePrices = $newPrices[$oldProductId];
-            foreach ($newPricePrices as $newPrice) {
-
+        foreach ($prices as $catalogGroupPriceArray) {
+            foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
                 if (empty($newPrice)) {
                     $errMessage = 'New price not found: could not add new price';
                     $this->logger->logError($errMessage);
@@ -708,18 +665,47 @@ class CatalogSyncService
                     return [];
                 }
                 unset($newPrice['ID']);
-                $addResult = PriceTable::add(array_merge($newPrice, ['PRODUCT_ID' => $productId]));
+                $newPrice['PRODUCT_ID'] = $productId;
+                $addResult = PriceTable::add($newPrice);
 
                 if ($addResult->isSuccess()) {
                     $id = $addResult->getId();
-                    $action = 'CREATED';
+                    $addedPricesIds[] = $id;
+
                 } else {
-                    return [];
+                    $err = $addResult->getErrorMessages();
+                    $this->logger->logError(['create' => $err]);
+                    return ['ERRORS' => $err];
                 }
             }
-
         }
-        return ['ID' => $id, 'ACTION' => $action];
+    }
+
+    private function updatePrices(
+        $newPrices,
+        $existingPrices,
+        $newProductId,
+        &$updatedPricesIds
+    )
+    {
+
+        foreach ($newPrices as $productId => $catalogGroupPriceArray) {
+            foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
+                \Bitrix\Main\Diag\Debug::writeToFile([$existingPrices, $newProductId, $catalogGroupId], date("d.m.Y H:i:s"), "local/priceshah.log");
+
+                $updateRes = \Bitrix\Catalog\PriceTable::update(
+                    $existingPrices[$newProductId][$catalogGroupId]['ID'],
+                    array_merge($newPrice, ['PRODUCT_ID' => $newProductId])
+                );
+                if ($updateRes->isSuccess()) {
+                    $updatedPricesIds[] = $updateRes->getId();
+                } else {
+                    $this->logger->logError(['update' => $updateRes->getErrorMessages()]);
+                }
+            }
+        }
+
+
     }
 
     private function addUpdateIBCatalogElementOffer
