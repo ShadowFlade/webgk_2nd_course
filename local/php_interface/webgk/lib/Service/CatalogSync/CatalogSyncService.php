@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [12, 11, 10, 9, 8, 7, 1];
+    private $SECTIONS_IN_IDS = [25, 26, 27, 28, 29, 30, 31];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 23;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 32;
 
 
     private $PROP_TYPES = [
@@ -286,6 +286,7 @@ class CatalogSyncService
         $this->existingElsMain = $existingEls;
 
         $sectionsMap = $this->getSectionsMap();
+        \Bitrix\Main\Diag\Debug::writeToFile($sectionsMap, date("d.m.Y H:i:s"), "local/log.log");
 
 
         $products = $this->getProducts(array_keys($els));
@@ -308,13 +309,14 @@ class CatalogSyncService
             $newEl = new \CIBlockElement();
             $isThisElExists = isset($existingEls[$el['CODE']]);
             $allProps = $this->formatPropsForAddingUpdating($props, $this->GOODS_IB_ID_OUT);
-
-            if (isset($sectionsMap[$el['IBLOCK_SECTION_ID']])) {
+            $isActive = true;
+            if (isset($sectionsMap[$el['IBLOCK_SECTION_ID']]) && in_array($sectionsMap[$el['IBLOCK_SECTION_ID']]['ID'], $this->SECTIONS_IN_IDS)) {
                 $newSectionId = $sectionsMap[$el['IBLOCK_SECTION_ID']]['ID'];
             } else {
                 $newSectionId = $this->NEW_PRODUCTS_SECTION_ID_OUT;
+                $isActive = false;
             }
-
+            \Bitrix\Main\Diag\Debug::writeToFile(['el id' => $el['ID'],'section id' => $newSectionId, 'el section id' => $el['IBLOCK_SECTION_ID']], date("d.m.Y H:i:s"), "local/log.log");
 
 
             $newFields = [
@@ -323,6 +325,7 @@ class CatalogSyncService
                 'CODE' => $fields['CODE'],
                 'IBLOCK_SECTION_ID' => $newSectionId,
                 'PROPERTY_VALUES' => $allProps,
+                'ACTIVE' => $isActive ? 'Y' : 'N'
             ];
 
             if ($isThisElExists) {
