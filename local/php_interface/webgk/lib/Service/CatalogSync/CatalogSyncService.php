@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [33, 34, 35, 36, 37, 38, 39];
+    private $SECTIONS_IN_IDS = [49, 50, 51, 52, 53, 54, 55];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 40;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 56;
 
 
     private $PROP_TYPES = [
@@ -77,14 +77,14 @@ class CatalogSyncService
         }
 
         $propsSkipped = [];
-        if ($iblock == 'offers') {
-            \Bitrix\Main\Diag\Debug::writeToFile(
-                ['existing' => $existingProps, 'props' => $props],
-                date("d.m.Y H:i:s"),
-                "local/offersprops.log"
-            );
-
-        }
+//        if ($iblock == 'offers') {
+//            \Bitrix\Main\Diag\Debug::writeToFile(
+//                ['existing' => $existingProps, 'props' => $props],
+//                date("d.m.Y H:i:s"),
+//                "local/offersprops.log"
+//            );
+//
+//        }
 
         foreach ($props as $prop) {
 
@@ -101,9 +101,9 @@ class CatalogSyncService
                 $listProp = $this->createListProp($prop, $ibOut);
 
                 $id = $newProp->Add($listProp);
-                if ($iblock == 'offers') {
-                    \Bitrix\Main\Diag\Debug::writeToFile(['new prop id' => $id, 'list fields' => $listProp], date("d.m.Y H:i:s"), "local/offersprops.log");
-                }
+//                if ($iblock == 'offers') {
+//                    \Bitrix\Main\Diag\Debug::writeToFile(['new prop id' => $id, 'list fields' => $listProp], date("d.m.Y H:i:s"), "local/offersprops.log");
+//                }
 
 
                 if (!$id) {
@@ -243,7 +243,6 @@ class CatalogSyncService
             $propVar['SORT'] = $variant['PROPERTY_SORT'];
             $newFields['VALUES'][] = $propVar;
         }
-        \Bitrix\Main\Diag\Debug::writeToFile(['list fields' => $newFields], date("d.m.Y H:i:s"), "local/newfields.log");
 
         return $newFields;
 
@@ -459,7 +458,6 @@ class CatalogSyncService
                 'CODE' => $fields['CODE'],
                 'PROPERTY_VALUES' => $allProps,
             ];
-            \Bitrix\Main\Diag\Debug::writeToFile($newFields, date("d.m.Y H:i:s"), "local/newfields2.log");
 
 
             $offerResult = $this->addUpdateIBCatalogElementOffer(

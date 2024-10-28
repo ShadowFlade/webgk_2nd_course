@@ -1,10 +1,10 @@
 <?
 define("HIDE_SIDEBAR", true);
-require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
+require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
 ?>
-<?$APPLICATION->IncludeComponent("bitrix:catalog", "bootstrap_v4", array(
-    "IBLOCK_TYPE" => "catalog",
-    "IBLOCK_ID" => "2",
+<? $APPLICATION->IncludeComponent("bitrix:catalog", "bootstrap_v4", [
+    "IBLOCK_TYPE" => "catalog_new",
+    "IBLOCK_ID" => "23",
     "TEMPLATE_THEME" => "site",
     "HIDE_NOT_AVAILABLE" => "N",
     "BASKET_URL" => "/personal/cart/",
@@ -14,7 +14,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
     "PRODUCT_QUANTITY_VARIABLE" => "quantity",
     "PRODUCT_PROPS_VARIABLE" => "prop",
     "SEF_MODE" => "Y",
-    "SEF_FOLDER" => "/catalog/",
+    "SEF_FOLDER" => "/catalog_new/",
     "AJAX_MODE" => "N",
     "AJAX_OPTION_JUMP" => "N",
     "AJAX_OPTION_STYLE" => "Y",
@@ -33,25 +33,25 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
     "FILTER_NAME" => "",
     "FILTER_VIEW_MODE" => "VERTICAL",
     "USE_COMPARE" => "N",
-    "PRICE_CODE" => array(
+    "PRICE_CODE" => [
         0 => "BASE",
-    ),
+    ],
     "USE_PRICE_COUNT" => "N",
     "SHOW_PRICE_COUNT" => "1",
     "PRICE_VAT_INCLUDE" => "Y",
     "PRICE_VAT_SHOW_VALUE" => "N",
-    "PRODUCT_PROPERTIES" => array(
-    ),
+    "PRODUCT_PROPERTIES" => [
+    ],
     "USE_PRODUCT_QUANTITY" => "Y",
     "CONVERT_CURRENCY" => "N",
     "QUANTITY_FLOAT" => "N",
-    "OFFERS_CART_PROPERTIES" => array(
+    "OFFERS_CART_PROPERTIES" => [
         0 => "SIZES_SHOES",
         1 => "SIZES_CLOTHES",
         2 => "COLOR_REF",
-    ),
+    ],
     "SHOW_TOP_ELEMENTS" => "N",
-    "SECTION_COUNT_ELEMENTS" => "N",
+    "SECTION_COUNT_ELEMENTS" => "Y",
     "SECTION_TOP_DEPTH" => "1",
     "SECTIONS_VIEW_MODE" => "TILE",
     "SECTIONS_SHOW_PARENT_NAME" => "N",
@@ -61,52 +61,52 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
     "ELEMENT_SORT_ORDER" => "asc",
     "ELEMENT_SORT_FIELD2" => "id",
     "ELEMENT_SORT_ORDER2" => "desc",
-    "LIST_PROPERTY_CODE" => array(
+    "LIST_PROPERTY_CODE" => [
         0 => "NEWPRODUCT",
         1 => "SALELEADER",
         2 => "SPECIALOFFER",
         3 => "",
-    ),
+    ],
     "INCLUDE_SUBSECTIONS" => "Y",
     "LIST_META_KEYWORDS" => "UF_KEYWORDS",
     "LIST_META_DESCRIPTION" => "UF_META_DESCRIPTION",
     "LIST_BROWSER_TITLE" => "UF_BROWSER_TITLE",
-    "LIST_OFFERS_FIELD_CODE" => array(
+    "LIST_OFFERS_FIELD_CODE" => [
         0 => "NAME",
         1 => "PREVIEW_PICTURE",
         2 => "DETAIL_PICTURE",
         3 => "",
-    ),
-    "LIST_OFFERS_PROPERTY_CODE" => array(
+    ],
+    "LIST_OFFERS_PROPERTY_CODE" => [
         0 => "SIZES_SHOES",
         1 => "SIZES_CLOTHES",
         2 => "COLOR_REF",
         3 => "MORE_PHOTO",
         4 => "ARTNUMBER",
         5 => "",
-    ),
+    ],
     "LIST_OFFERS_LIMIT" => "0",
     "SECTION_BACKGROUND_IMAGE" => "UF_BACKGROUND_IMAGE",
-    "DETAIL_PROPERTY_CODE" => array(
+    "DETAIL_PROPERTY_CODE" => [
         0 => "NEWPRODUCT",
         1 => "MANUFACTURER",
         2 => "MATERIAL",
-    ),
+    ],
     "DETAIL_META_KEYWORDS" => "KEYWORDS",
     "DETAIL_META_DESCRIPTION" => "META_DESCRIPTION",
     "DETAIL_BROWSER_TITLE" => "TITLE",
-    "DETAIL_OFFERS_FIELD_CODE" => array(
+    "DETAIL_OFFERS_FIELD_CODE" => [
         0 => "NAME",
         1 => "",
-    ),
-    "DETAIL_OFFERS_PROPERTY_CODE" => array(
+    ],
+    "DETAIL_OFFERS_PROPERTY_CODE" => [
         0 => "ARTNUMBER",
         1 => "SIZES_SHOES",
         2 => "SIZES_CLOTHES",
         3 => "COLOR_REF",
         4 => "MORE_PHOTO",
         5 => "",
-    ),
+    ],
     "DETAIL_BACKGROUND_IMAGE" => "BACKGROUND_IMAGE",
     "LINK_IBLOCK_TYPE" => "",
     "LINK_IBLOCK_ID" => "",
@@ -128,17 +128,17 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
     "PAGER_DESC_NUMBERING_CACHE_TIME" => "36000000",
     "PAGER_SHOW_ALL" => "N",
     "ADD_PICT_PROP" => "MORE_PHOTO",
-    "LABEL_PROP" => array(
+    "LABEL_PROP" => [
         0 => "NEWPRODUCT",
-    ),
+    ],
     "PRODUCT_DISPLAY_MODE" => "Y",
     "OFFER_ADD_PICT_PROP" => "MORE_PHOTO",
-    "OFFER_TREE_PROPS" => array(
+    "OFFER_TREE_PROPS" => [
         0 => "SIZES_SHOES",
         1 => "SIZES_CLOTHES",
         2 => "COLOR_REF",
         3 => "",
-    ),
+    ],
     "SHOW_DISCOUNT_PERCENT" => "Y",
     "SHOW_OLD_PRICE" => "Y",
     "MESS_BTN_BUY" => "Купить",
@@ -153,29 +153,29 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
     "DETAIL_VK_USE" => "N",
     "DETAIL_FB_USE" => "Y",
     "AJAX_OPTION_ADDITIONAL" => "",
-    "USE_STORE" => "Y",
+    "USE_STORE" => "N",
     "BIG_DATA_RCM_TYPE" => "personal",
-    "FIELDS" => array(
-        0 => "STORE",
-        1 => "SCHEDULE",
-    ),
+//    "FIELDS" => [
+//        0 => "STORE",
+//        1 => "SCHEDULE",
+//    ],
     "USE_MIN_AMOUNT" => "N",
-    "STORE_PATH" => "/store/#store_id#",
+//    "STORE_PATH" => "/store/#store_id#",
     "MAIN_TITLE" => "Наличие на складах",
-    "MIN_AMOUNT" => "10",
+    "MIN_AMOUNT" => "1",
     "DETAIL_BRAND_USE" => "Y",
     "DETAIL_BRAND_PROP_CODE" => "BRAND_REF",
     "COMPATIBLE_MODE" => "N",
     "SIDEBAR_SECTION_SHOW" => "Y",
     "SIDEBAR_DETAIL_SHOW" => "Y",
-    "SIDEBAR_PATH" => "/catalog/sidebar.php",
-    "SEF_URL_TEMPLATES" => array(
+//    "SIDEBAR_PATH" => "/catalog_new/sidebar.php",
+    "SEF_URL_TEMPLATES" => [
         "sections" => "",
-        "section" => "#SECTION_CODE#/",
-        "element" => "#SECTION_CODE#/#ELEMENT_CODE#/",
+        "section" => "#SECTION_CODE_PATH#/",
+        "element" => "/#SECTION_CODE_PATHq#/#ELEMENT_CODE#/",
         "compare" => "compare/",
-    )
-),
+    ],
+],
     false
-);?>
-<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>
+); ?>
+<? require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/footer.php"); ?>
