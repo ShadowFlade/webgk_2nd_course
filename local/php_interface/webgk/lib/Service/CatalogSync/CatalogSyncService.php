@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [25, 26, 27, 28, 29, 30, 31];
+    private $SECTIONS_IN_IDS = [33, 34, 35, 36, 37, 38, 39];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 32;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 40;
 
 
     private $PROP_TYPES = [
@@ -77,6 +77,15 @@ class CatalogSyncService
         }
 
         $propsSkipped = [];
+        if ($iblock == 'offers') {
+            \Bitrix\Main\Diag\Debug::writeToFile(
+                ['existing' => $existingProps, 'props' => $props],
+                date("d.m.Y H:i:s"),
+                "local/offersprops.log"
+            );
+
+        }
+
         foreach ($props as $prop) {
 
             if (isset($existingProps[$prop['CODE']])) {//if prop with such code already exists skip it - maybe change it to configurable later
@@ -89,9 +98,12 @@ class CatalogSyncService
             unset($prop['TMP_ID']);
 
             if ($prop['PROPERTY_TYPE'] == 'L' && empty($prop['USER_TYPE'])) {//creating property of type list
-                $listProp = $this->createListProp($prop);
+                $listProp = $this->createListProp($prop, $ibOut);
 
                 $id = $newProp->Add($listProp);
+                if ($iblock == 'offers') {
+                    \Bitrix\Main\Diag\Debug::writeToFile(['new prop id' => $id, 'list fields' => $listProp], date("d.m.Y H:i:s"), "local/offersprops.log");
+                }
 
 
                 if (!$id) {
@@ -99,12 +111,12 @@ class CatalogSyncService
                     $err = $id->LAST_ERROR . ' Ошибка при создании свойства типа список';
                     $this->logger->logError($err);
                     $APPLICATION->ThrowException($err);
+                } else {
+                    $propsCount[] = [$prop['CODE']];
                 }
-                $propsCount[] = [$prop['CODE']];
 
             } else if ($prop['PROPERTY_TYPE'] == 'N') {//скипаем создание свойства типа integer потому что в нашем каталоге не будет такого типа и мне лень проверять работает он так или нет
                 $propsSkipped[] = [$prop['CODE']];
-                continue;
             } else { //creating property of type string or file or catalogue
                 $newPropFields = [
                     'NAME' => $prop['NAME'],
@@ -137,18 +149,19 @@ class CatalogSyncService
 
             }
 
-            $this->logger->logProcess(
-                [
-                    "props created $iblock" => $propsCount,
-                    "props created count $iblock" => count($propsCount),
-                    "props skipped $iblock" => $propsSkipped,
-                    "props skipped count $iblock" => count($propsSkipped),
-                ],
-                true,
-            );
 
-            return $propsCount;
         }
+        $this->logger->logProcess(
+            [
+                "props created $iblock" => $propsCount,
+                "props created count $iblock" => count($propsCount),
+                "props skipped $iblock" => $propsSkipped,
+                "props skipped count $iblock" => count($propsSkipped),
+            ],
+            true,
+        );
+
+        return $propsCount;
     }
 
     public function deleteAllProps($iblockID)
@@ -207,14 +220,14 @@ class CatalogSyncService
 
     }
 
-    private function createListProp($fields)
+    private function createListProp($fields, $ibOut)
     {
         $newFields = [
             'NAME' => $fields['NAME'],
             'ACTIVE' => $fields['ACTIVE'],
             'SORT' => $fields['PROPERTY_SORT'] ?? $fields['SORT'],
             'CODE' => $fields['CODE'],
-            'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
+            'IBLOCK_ID' => $ibOut,
             'PROPERTY_TYPE' => $fields['PROPERTY_TYPE'],
             'USER_TYPE' => $fields['USER_TYPE'],
             'USER_TYPE_SETTINGS' => $fields['USER_TYPE_SETTINGS'],
@@ -230,6 +243,8 @@ class CatalogSyncService
             $propVar['SORT'] = $variant['PROPERTY_SORT'];
             $newFields['VALUES'][] = $propVar;
         }
+        \Bitrix\Main\Diag\Debug::writeToFile(['list fields' => $newFields], date("d.m.Y H:i:s"), "local/newfields.log");
+
         return $newFields;
 
     }
@@ -286,7 +301,6 @@ class CatalogSyncService
         $this->existingElsMain = $existingEls;
 
         $sectionsMap = $this->getSectionsMap();
-        \Bitrix\Main\Diag\Debug::writeToFile($sectionsMap, date("d.m.Y H:i:s"), "local/log.log");
 
 
         $products = $this->getProducts(array_keys($els));
@@ -316,7 +330,6 @@ class CatalogSyncService
                 $newSectionId = $this->NEW_PRODUCTS_SECTION_ID_OUT;
                 $isActive = false;
             }
-            \Bitrix\Main\Diag\Debug::writeToFile(['el id' => $el['ID'],'section id' => $newSectionId, 'el section id' => $el['IBLOCK_SECTION_ID']], date("d.m.Y H:i:s"), "local/log.log");
 
 
             $newFields = [
@@ -446,6 +459,7 @@ class CatalogSyncService
                 'CODE' => $fields['CODE'],
                 'PROPERTY_VALUES' => $allProps,
             ];
+            \Bitrix\Main\Diag\Debug::writeToFile($newFields, date("d.m.Y H:i:s"), "local/newfields2.log");
 
 
             $offerResult = $this->addUpdateIBCatalogElementOffer(

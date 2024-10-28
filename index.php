@@ -39,7 +39,7 @@ $trendFilter = array('PROPERTY_TREND' => '4');
 	"bootstrap_v4",
 	array(
 		"IBLOCK_TYPE_ID" => "catalog",
-		"IBLOCK_ID" => "2",
+		"IBLOCK_ID" => "12",
 		"BASKET_URL" => "/personal/cart/",
 		"COMPONENT_TEMPLATE" => "",
 		"IBLOCK_TYPE" => "catalog",
