@@ -7,7 +7,6 @@ class Exchange1C
     {
 
         $root = $_SERVER['DOCUMENT_ROOT'];
-        echo $root;
 
         $list = [];
         $map = [

@@ -13,6 +13,7 @@ class Register
         self::initSaleHandlers();
         self::initCatalogHandlers();
         self::initUserHandlers();
+        self::initSearchHandlers();
 
     }
 
@@ -38,8 +39,12 @@ class Register
 
     private static function initUserHandlers()
     {
-
         self::$eventManager->addEventHandler('main', 'OnBeforeUserRegister', ['\Webgk\Handler\User', 'OnBeforeUserRegister']);
+    }
+
+    private static function initSearchHandlers()
+    {
+        self::$eventManager->addEventHandler('search', 'BeforeIndex', ['\Webgk\Service\Search\Index', 'BeforeIndexHandler']);
     }
 }
 

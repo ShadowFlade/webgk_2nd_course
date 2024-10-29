@@ -14,15 +14,7 @@ class Catalog
         $arDiscountCoupons
     )
     {
-        \Bitrix\Main\Diag\Debug::writeToFile([
-            $productId,
-            $quantity,
-            $arUserGroups,
-            $renewal,
-            $arPrices,
-            $siteId,
-            $arDiscountCoupons
-        ], date("d.m.Y H:i:s"), "local/log.log");
+
         $opt1PriceCatalogGroupId = 2;
         $price = (new \Bitrix\Main\ORM\Query\Query(\Bitrix\Catalog\PriceTable::getEntity()))
             ->setSelect(['PRODUCT.IBLOCK_ID', 'ID', 'CATALOG_GROUP_ID', 'CURRENCY', 'PRICE'])
