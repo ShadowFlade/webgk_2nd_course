@@ -23,7 +23,7 @@ class Register
 
     private static function initMainHandlers()
     {
-
+        self::$eventManager->addEventHandler('main', 'OnBuildGlobalMenu', ['\Webgk\Singletons\Exchange1C', 'ModifyAdminMenu']);
     }
 
     private static function initSaleHandlers()
