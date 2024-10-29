@@ -27,7 +27,7 @@ class UserService
         return $captchaService->IS_VALID;
     }
 
-    private function OnBeforeUserRegister(&$arFields)
+    public function OnBeforeUserRegister(&$arFields)
     {
         \Bitrix\Main\Diag\Debug::writeToFile(['on before'], date("d.m.Y H:i:s"), "local/log.log");
 

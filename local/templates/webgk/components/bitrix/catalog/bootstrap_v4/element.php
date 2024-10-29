@@ -229,6 +229,7 @@ $isSidebarLeft = isset($arParams['SIDEBAR_SECTION_POSITION']) && $arParams['SIDE
 		{
 			if ($arParams['USE_STORE'] == 'Y' && ModuleManager::isModuleInstalled('catalog'))
 			{
+
 				$APPLICATION->IncludeComponent('bitrix:catalog.store.amount', '', array(
 						'ELEMENT_ID' => $elementId,
 						'STORE_PATH' => $arParams['STORE_PATH'],

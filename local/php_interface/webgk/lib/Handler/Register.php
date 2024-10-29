@@ -33,7 +33,7 @@ class Register
 
     private static function initCatalogHandlers()
     {
-
+        self::$eventManager->addEventHandler("catalog", "OnGetOptimalPrice", ['\Webgk\Handler\Catalog', 'GetOptimalPrice']);
     }
 
     private static function initUserHandlers()
