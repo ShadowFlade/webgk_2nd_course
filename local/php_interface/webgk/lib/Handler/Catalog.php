@@ -29,6 +29,8 @@ class Catalog
                 )
             )
             ->exec()->fetch();
+        \Bitrix\Main\Diag\Debug::writeToFile($price, date("d.m.Y H:i:s"), "local/optimal_price.log");
+
 
         return [
             'PRICE' => [

@@ -8,7 +8,10 @@ use Bitrix\Main\Localization\Loc;
 ?>
 <script id="basket-total-template" type="text/html">
 	<div class="basket-checkout-container" data-entity="basket-checkout-aligner">
-		<?
+        {{#INSUFFICIENT_SUM_ERROR}}
+        <h3 class='js-warning-price warning-price'>Добавьте еще товаров на <span class='js-price-warning price-warning'>{{INSUFFICIENT_SUM_REMAINING}} </span> рублей, чтобы получить бесплатную доставку</h3>
+        {{/INSUFFICIENT_SUM_ERROR}}
+        <?
 		if ($arParams['HIDE_COUPON'] !== 'Y')
 		{
 			?>

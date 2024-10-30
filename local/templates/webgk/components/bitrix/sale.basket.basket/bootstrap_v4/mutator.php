@@ -405,8 +405,8 @@ $totalData = array(
 );
 if ($result['allSum'] < 1000) {
     $totalData['DISABLE_CHECKOUT'] = true;
-    $remainingSum = 1000 - $result['allSum'];
-    echo "<h3>Добавьте еще товаров на $remainingSum рублей, чтобы получить бесплатную доставку</h3>";
+    $totalData['INSUFFICIENT_SUM_ERROR'] = true;
+    $totalData['INSUFFICIENT_SUM_REMAINING'] = 1000 - $result['allSum'];
 }
 
 if ($result['DISCOUNT_PRICE_ALL'] > 0)
