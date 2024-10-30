@@ -1,0 +1,1 @@
+update b_catalog_product left join b_iblock_element on b_catalog_product.ID = b_iblock_element.ID set b_catalog_product.VAT_ID = 3, b_catalog_product.VAT_INCLUDED = 'N' where b_iblock_element.IBLOCK_ID = 23;
