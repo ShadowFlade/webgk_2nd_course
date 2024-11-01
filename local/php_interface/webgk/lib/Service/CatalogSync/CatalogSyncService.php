@@ -478,7 +478,7 @@ class CatalogSyncService
                     $createdProductsIds
                 );
                 $this->addProductStore($el['ID'], $offerResult['ID'], $addedProductStoreIds);
-                $this->addPrices($prices, $offerResult['ID'], $createdPricesIds);
+                $this->addPrices($prices, $el['ID'], $offerResult['ID'], $createdPricesIds);
 
             } else if ($offerResult['ACTION'] == 'UPDATED' && empty($offerResult['ERRORS'])) {
                 $updatedProductIds[] = $offerResult['ID'];
@@ -693,30 +693,34 @@ class CatalogSyncService
         return [$productPrices, $priceIdToProductIdMap];
     }
 
-    private
-    function addPrices(array $prices, int $productId, array &$addedPricesIds)
+    private function addPrices(array $prices, int $currProductId, int $productId, array &$addedPricesIds)
     {
-        foreach ($prices as $catalogGroupPriceArray) {
-            foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
-                if (empty($newPrice)) {
-                    $errMessage = 'New price not found: could not add new price';
-                    $this->logger->logError($errMessage);
-                    $this->app->ThrowException($errMessage);
-                    return [];
-                }
-                unset($newPrice['ID']);
-                $newPrice['PRODUCT_ID'] = $productId;
-                $addResult = PriceTable::add($newPrice);
+//        \Bitrix\Main\Diag\Debug::writeToFile($prices, date("d.m.Y H:i:s"), "local/log.log");
 
-                if ($addResult->isSuccess()) {
-                    $id = $addResult->getId();
+        foreach ($prices[$currProductId] as $newPrice) {
+            if (empty($newPrice)) {
+                $errMessage = 'New price not found: could not add new price';
+                $this->logger->logError($errMessage);
+                $this->app->ThrowException($errMessage);
+                return [];
+            }
+            unset($newPrice['ID']);
+            unset($newPrice['TIMESTAMP_X']);
+            $newPrice['PRODUCT_ID'] = $productId;
+            $addResult = PriceTable::add($newPrice);
+
+            if ($addResult->isSuccess()) {
+                $id = $addResult->getId();
+                if (!empty($id)) {
                     $addedPricesIds[] = $id;
-
                 } else {
-                    $err = $addResult->getErrorMessages();
-                    $this->logger->logError(['create' => $err]);
-                    return ['ERRORS' => $err];
+                    $addedPricesIds[] = 'haha';
                 }
+
+            } else {
+                $err = $addResult->getErrorMessages();
+                $this->logger->logError(['create price' => $err]);
+                return ['ERRORS' => $err];
             }
         }
     }
