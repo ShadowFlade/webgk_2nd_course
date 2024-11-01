@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [];
+    private $SECTIONS_IN_IDS = [124, 125, 126, 127, 128, 129, 130];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 0;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 131;
 
 
     private $PROP_TYPES = [
@@ -603,7 +603,9 @@ class CatalogSyncService
             $errCollection = $storeResult->getErrors();
         } else {
             $action = 'CREATED';
-            $addedProductStoreIds[] = $storeResult->getId();
+            $id = $storeResult->getId();
+            $addedProductStoreIds[] = $id;
+            $this->setQuantityByProduct($id);
         }
 
         return ['ERRORS' => $errCollection, 'ACTION' => $action, 'ID' => $storeResult->getId()];
@@ -612,8 +614,6 @@ class CatalogSyncService
     private
     function updateProduct(array $newProduct, int $newOfferId, int $type, &$updateProductIds,)
     {
-
-
         if (empty($newProduct)) {
             $err = "No new product to update with id: {$newProduct['ID']} : {$newOfferId}";
             $this->logger->logError($err);
@@ -631,7 +631,9 @@ class CatalogSyncService
         if (!$storeResult->isSuccess()) {
             $errCollection = $storeResult->getErrors();
         } else {
-            $updateProductIds[] = $storeResult->getId();
+            $id = $storeResult->getId();
+            $updateProductIds[] = $id;
+            $this->setQuantityByProduct($id);
         }
 
         return ['ERRORS' => $errCollection, 'ID' => $storeResult->getId()];

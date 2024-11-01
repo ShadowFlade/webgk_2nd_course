@@ -1,6 +1,6 @@
 (function (window){
 	'use strict';
-
+	console.log('hahah')
 	if (window.JCCatalogItem)
 		return;
 
@@ -2332,6 +2332,7 @@
 
 		initBasketUrl: function()
 		{
+			console.log('init basket url product type', this.productType)
 			this.basketUrl = (this.basketMode === 'ADD' ? this.basketData.add_url : this.basketData.buy_url);
 			switch (this.productType)
 			{
@@ -2339,9 +2340,11 @@
 				case 2: // set
 				case 7: // service
 					this.basketUrl = this.basketUrl.replace('#ID#', this.product.id.toString());
+					console.log(this.basketUrl,' basket url for service')
 					break;
 				case 3: // sku
 					this.basketUrl = this.basketUrl.replace('#ID#', this.offers[this.offerNum].ID);
+					console.log(this.basketUrl,' basket url');
 					break;
 			}
 			this.basketParams = {
@@ -2437,6 +2440,7 @@
 
 		add2Basket: function()
 		{
+			console.log('addding');
 			this.basketMode = 'ADD';
 			this.basket();
 		},
@@ -2449,6 +2453,7 @@
 
 		sendToBasket: function()
 		{
+			console.log(this.basketUrl,' basket url')
 			if (!this.canBuy)
 			{
 				return;
@@ -2515,6 +2520,7 @@
 
 		basketResult: function(arResult)
 		{
+			console.log(arResult,' ar result');
 			var strContent = '',
 				strPict = '',
 				successful,

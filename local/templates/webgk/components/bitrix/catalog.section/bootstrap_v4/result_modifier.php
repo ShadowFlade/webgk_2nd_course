@@ -5,5 +5,6 @@
  * @var CatalogSectionComponent $component
  */
 
+
 $component = $this->getComponent();
 $arParams = $component->applyTemplateModifications();

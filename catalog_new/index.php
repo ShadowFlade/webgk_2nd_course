@@ -7,7 +7,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
     "bootstrap_v4",
     [
         "IBLOCK_TYPE" => "catalog_new",
-        "IBLOCK_ID" => "23",
+        "IBLOCK_ID" => NEW_CATALOG_IBLOCK_ID,
         "TEMPLATE_THEME" => "site",
         "HIDE_NOT_AVAILABLE" => "N",
         "BASKET_URL" => "/personal/cart/",
@@ -22,7 +22,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
         "AJAX_OPTION_JUMP" => "N",
         "AJAX_OPTION_STYLE" => "Y",
         "AJAX_OPTION_HISTORY" => "N",
-        "CACHE_TYPE" => "A",
+        "CACHE_TYPE" => "N",
         "CACHE_TIME" => "36000000",
         "CACHE_FILTER" => "Y",
         "CACHE_GROUPS" => "Y",
@@ -87,7 +87,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
             4 => "ARTNUMBER",
             5 => "",
         ],
-        "LIST_OFFERS_LIMIT" => "0",
+        "LIST_OFFERS_LIMIT" => "9999",
         "SECTION_BACKGROUND_IMAGE" => "-",
         "DETAIL_PROPERTY_CODE" => [
             0 => "NEWPRODUCT",
