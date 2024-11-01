@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [49, 50, 51, 52, 53, 54, 55];
+    private $SECTIONS_IN_IDS = [];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 56;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 0;
 
 
     private $PROP_TYPES = [
@@ -46,9 +46,21 @@ class CatalogSyncService
 
     public function init($isStartOver = false)
     {
-//        if ($isStartOver) {
-//            $this->deleteAllIBCatalogElements();
-//        }
+
+        if ($isStartOver) {//creating sections structure
+            $sections = Utils::createSections($this->GOODS_IB_ID_OUT);
+            $newSectionIds = [];
+            foreach ($sections as $code => $sectionId) {
+                if ($code != 'new_products') {
+                    $newSectionIds[] = $sectionId;
+                } else if ($code == 'new_products') {
+                    $this->NEW_PRODUCTS_SECTION_ID_OUT = $sectionId;
+                }
+            }
+            $this->SECTIONS_IN_IDS = $newSectionIds;
+        }
+
+
         $newEls = $this->syncMainCatalog();
         $this->syncOffers($newEls);
     }

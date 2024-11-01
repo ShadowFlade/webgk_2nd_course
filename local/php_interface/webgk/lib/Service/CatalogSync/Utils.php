@@ -1,45 +1,73 @@
 <?php
+
 namespace Webgk\Service\CatalogSync;
+
+use Webgk\Service\CatalogSync\Logger;
+
+//supplementary class only for testing, does not affect the synchronization in any way
 class Utils
 {
     public static function createSections($ibOut)
     {
+        $logger = new Logger();
         $sections = [
             [
-                'code' => 'shoes',
-                'name' => 'Обувь'
+                'CODE' => 'shoes',
+                'NAME' => 'Обувь'
             ],
             [
-                'code' => 'dresses',
-                'name' => 'Платья',
+                'CODE' => 'dresses',
+                'NAME' => 'Платья',
             ],
             [
-                'code' => 'pants',
-                'name' => 'Штаны',
+                'CODE' => 'pants',
+                'NAME' => 'Штаны',
             ],
             [
-                'code' => 'underwear',
-                'name' => 'Нижнее белье',
+                'CODE' => 'underwear',
+                'NAME' => 'Нижнее белье',
             ],
             [
-                'code' => 't-shirts',
-                'name' => 'Футболки',
+                'CODE' => 't-shirts',
+                'NAME' => 'Футболки',
             ],
             [
-                'code' => 'sportswear',
-                'name' => 'Спортивная Одежда',
+                'CODE' => 'sportswear',
+                'NAME' => 'Спортивная Одежда',
             ],
             [
-                'code' => 'accessories',
-                'name' => 'Аксессуары',
+                'CODE' => 'accessories',
+                'NAME' => 'Аксессуары',
             ],
             [
-                'code' => 'new_products',
-                'name' => 'Новые продукты',
+                'CODE' => 'new_products',
+                'NAME' => 'Новые продукты',
             ],
         ];
+        $newIds = [];
         foreach ($sections as $section) {
-            \Bitrix\Iblock\SectionTable::add(array_merge($section,['IBLOCK_ID'=>$ibOut]));
+
+            $newSection = new \CIBlockSection();
+            $addRes = $newSection->Add(
+                array_merge(
+                    $section,
+                    ['ACTIVE' => 'Y', 'IBLOCK_ID' => $ibOut]
+                ),
+                false
+            );
+
+
+            if (!empty($addRes)) {
+                $id = $addRes;
+                $newIds[$section['CODE']] = $id;
+            } else {
+                $logger->logError("Could not add section with code {$section['CODE']} in {$section['NAME']}.']}");
+            }
+            if (!empty($newIds)) {
+                $logger->logProcess(['newly created section ids' => $newIds]);
+            }
         }
+
+        return $newIds;
     }
 }
