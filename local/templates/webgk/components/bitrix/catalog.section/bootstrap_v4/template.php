@@ -284,6 +284,7 @@ $themeClass = isset($arParams['TEMPLATE_THEME']) ? ' bx-'.$arParams['TEMPLATE_TH
 							case 2:
 								foreach ($rowItems as $item)
 								{
+
 									?>
 									<div class="col-sm-4 product-item-small-card">
 										<?

@@ -2,29 +2,44 @@
 
 namespace Webgk\Helper;
 
+use Bitrix\Main\Loader;
+use Bitrix\Sale;
 
 class CatalogHelper
 {
     public static function add2Basket($productId)
     {
-        $basket = Sale\Basket::loadItemsForFUser(Sale\Fuser::getId(), Bitrix\Main\Context::getCurrent()->getSite());
-        \Bitrix\Main\Diag\Debug::writeToFile($basket, date("d.m.Y H:i:s"), "local/log.log");
+        Loader::includeModule('sale');
+        $basket = Sale\Basket::loadItemsForFUser(Sale\Fuser::getId(), \Bitrix\Main\Context::getCurrent()->getSite());
         $fields = [
             'PRODUCT_ID' => $productId, // ID товара, обязательно
             'QUANTITY' => 1, // количество, обязательно
         ];
-        $r = Bitrix\Catalog\Product\Basket::addProduct($fields);
+        $r = \Bitrix\Catalog\Product\Basket::addProduct($fields);
         if (!$r->isSuccess()) {
             var_dump($r->getErrorMessages());
             return false;
         }
+        $data = [
+            'ID' => $r->getData(),
+        ];
+        $basketPrice = $basket->getPrice();
+        $diff = MINIMAL_PRICE_FOR_FREE_DELIVERY_BASKET - $basketPrice;
+
+        if ($diff > 0) {
+            $data['REMAINING_SUM'] = $diff;
+            $data['WARNINGS'][] = "До бесплатной доставки осталось добавить в корзину товаров еще на сумму $diff";
+        }
+
         $result = json_encode(
             [
-                'data' => $r->getData(),
+                'data' => $data,
                 'STATUS' => 'OK',
                 'MESSAGE' => 'Товар успешно добавлен в корзину)'
             ]);
-        echo $result;
+
+        \Bitrix\Main\Engine\Response\AjaxJson::createSuccess($result);
+
         return $result;
 
     }

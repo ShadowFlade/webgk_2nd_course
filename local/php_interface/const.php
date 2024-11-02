@@ -11,4 +11,5 @@ define('CATALOG_1C_TP_IBLOCK_ID', 3);
 define('NEW_CATALOG_IBLOCK_ID', 55);
 define('NEW_CATALOG_TP_IBLOCK_ID', 56);
 
-define('ADD_2_BASKET_URL','/catalog/add2basket.php');
+define('ADD_2_BASKET_URL', '/catalog/add2basket.php');
+define('MINIMAL_PRICE_FOR_FREE_DELIVERY_BASKET', 1000);
