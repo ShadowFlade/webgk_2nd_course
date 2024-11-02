@@ -7,23 +7,38 @@ use Bitrix\Sale;
 
 class CatalogHelper
 {
-    public static function add2Basket($productId)
+    public static function add2Basket($productId, $quantity)
     {
         Loader::includeModule('sale');
         $basket = Sale\Basket::loadItemsForFUser(Sale\Fuser::getId(), \Bitrix\Main\Context::getCurrent()->getSite());
         $fields = [
-            'PRODUCT_ID' => $productId, // ID товара, обязательно
-            'QUANTITY' => 1, // количество, обязательно
+            'PRODUCT_ID' => $productId,
+            'QUANTITY' => $quantity,
         ];
         $r = \Bitrix\Catalog\Product\Basket::addProduct($fields);
         if (!$r->isSuccess()) {
             var_dump($r->getErrorMessages());
             return false;
         }
+        $result = Sale\Internals\BasketTable::getList(array(
+            'filter' => array(
+                'FUSER_ID' => Sale\Fuser::getId(),
+                'ORDER_ID' => null,
+                'LID' => SITE_ID,
+                'CAN_BUY' => 'Y',
+            ),
+            'select' => array('BASKET_COUNT', 'BASKET_SUM'),
+            'runtime' => array(
+                new \Bitrix\Main\Entity\ExpressionField('BASKET_COUNT', 'COUNT(*)'),
+                new \Bitrix\Main\Entity\ExpressionField('BASKET_SUM', 'SUM(PRICE*QUANTITY)'),
+            )
+        ))->fetch();
+
         $data = [
             'ID' => $r->getData(),
         ];
-        $basketPrice = $basket->getPrice();
+        $basketPrice = $result['BASKET_SUM'];///еще есть BASKET_COUNT
+
         $diff = MINIMAL_PRICE_FOR_FREE_DELIVERY_BASKET - $basketPrice;
 
         if ($diff > 0) {
