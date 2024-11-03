@@ -385,6 +385,17 @@ else
 					<div class="bx-soa-section-content"></div>
 				</div>
 
+				<!--	BUYER PROPS BLOCK	-->
+				<div id="bx-soa-properties" data-visited="false" class="bx-soa-section bx-active">
+					<div class="bx-soa-section-title-container d-flex justify-content-between align-items-center flex-nowrap">
+						<div class="bx-soa-section-title" data-entity="section-title">
+							<span class="bx-soa-section-title-count"></span><?=$arParams['MESS_BUYER_BLOCK_NAME']?>
+						</div>
+						<div><a href="" class="bx-soa-editstep"><?=$arParams['MESS_EDIT']?></a></div>
+					</div>
+					<div class="bx-soa-section-content"></div>
+				</div>
+
 				<?php
 				if ($arParams['DELIVERY_TO_PAYSYSTEM'] === 'p2d'):
 				?>
@@ -454,16 +465,6 @@ else
 				<?php
 				endif;
 				?>
-				<!--	BUYER PROPS BLOCK	-->
-				<div id="bx-soa-properties" data-visited="false" class="bx-soa-section bx-active">
-					<div class="bx-soa-section-title-container d-flex justify-content-between align-items-center flex-nowrap">
-						<div class="bx-soa-section-title" data-entity="section-title">
-							<span class="bx-soa-section-title-count"></span><?=$arParams['MESS_BUYER_BLOCK_NAME']?>
-						</div>
-						<div><a href="" class="bx-soa-editstep"><?=$arParams['MESS_EDIT']?></a></div>
-					</div>
-					<div class="bx-soa-section-content"></div>
-				</div>
 
 				<?php
 				if ($arParams['BASKET_POSITION'] === 'after'):
