@@ -2213,6 +2213,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 				BX.addClass(allSections[i], 'bx-step-completed');
 				allSections[i].setAttribute('data-visited', 'true');
 				i++;
+                this.bindPhoneMask()
 			}
 		},
 
@@ -2413,6 +2414,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			{
 				this.switchOrderSaveButtons(this.shouldBeSectionVisible(sections, sections.length - 1));
 			}
+            this.bindPhoneMask()
 		},
 
 		changeVisibleSection: function(section, state)
@@ -2433,6 +2435,8 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			titleNode = section.querySelector('.bx-soa-section-title-container');
 			if (titleNode && !state)
 				BX.unbindAll(titleNode);
+
+            this.bindPhoneMask()
 		},
 
 		clearHiddenBlocks: function()
@@ -2483,6 +2487,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			this.totalBlockFixFont();
 
 			this.showErrors(this.result.ERROR, false);
+            this.bindPhoneMask()
 			this.showWarnings();
 		},
 
@@ -2548,6 +2553,10 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 
 			if (active)
 				section.setAttribute('data-visited', 'true');
+
+
+            this.bindPhoneMask()
+
 		},
 
 		editAuthBlock: function()
@@ -3617,6 +3626,8 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					}
 				}).animate();
 			}
+
+            this.bindPhoneMask()
 
 			return BX.PreventDefault(event);
 		},
@@ -5386,6 +5397,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			this.checkPickUpShow();
 
 			this.initialized.delivery = true;
+
 		},
 
 		editActiveDeliveryBlock: function(activeNodeMode)
@@ -5722,6 +5734,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					+ (item.CALCULATE_ERRORS || deliveryCached && deliveryCached.CALCULATE_ERRORS ? ' bx-bd-waring' : '')},
 				children: labelNodes
 			});
+
 
 			if (this.params.SHOW_DELIVERY_LIST_NAMES == 'Y')
 			{
@@ -6835,6 +6848,8 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
             if(this.getPropertCode(property.getId()) !== 'ADDRESS'){
                 propsItemsContainer.appendChild(propsItemNode);
             }
+            this.bindPhoneMask()
+
 		},
 
 		insertLocationProperty: function(property, propsItemNode, disabled)
@@ -8464,6 +8479,54 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
         getPropertCode: function(propId, code){
             const property = this.result.ORDER_PROP.properties.find(item => item.ID == propId);
             return property ? property.CODE : null;
-        }
+        },
+		bindPhoneMask: function () {
+			const phoneEls = document.querySelectorAll('[autocomplete="tel"]');
+			console.log(phoneEls, ' phone els')
+
+
+			phoneEls.forEach(phoneEl => {
+				if (phoneEl.dataset.isDataBound == 'true') {
+					console.warn('Phone mask already inited');
+					return;
+				}
+				phoneEl.setAttribute('placeholder', '+7 ___ ___ __ __');
+				phoneEl.setAttribute('maxlength', 20);
+
+				phoneEl.addEventListener("input", e => {
+					console.log('inputed');
+					const target = e.target;
+					const rawValue = target.value.replace(/\D/g, "");
+					const lastValue = (target.cleave).lastInputValue.replace(/\D/g, "");
+
+					if (rawValue.length === 0) {
+						phoneEl.cleave?.setRawValue("+7");
+					} else if (rawValue.length === 11) {
+						if (["7", "8"].includes(rawValue[0])) {
+							phoneEl.cleave?.setRawValue("+7" + rawValue.slice(1));
+						}
+					} else if (rawValue.length === 12) {
+						if (["7", "8"].includes(rawValue[1]) && lastValue.length < 10) {
+							phoneEl.cleave?.setRawValue("+7" + rawValue.slice(2));
+						}
+					}
+				});
+				if(phoneEl.value && phoneEl.value[0] == '8') {
+					console.log(phoneEl.value,' phone ele vaoue');
+					phoneEl.value = phoneEl.value.slice(1,phoneEl.value.length);
+				}
+				phoneEl.cleave = new Cleave(phoneEl, {
+					blocks: [2, 0, 3, 3, 2, 2],
+					delimeter: ' ',
+					noImmediatePrefix: true,
+					delimiterLazyShow: true,
+					numericOnly: true,
+					prefix: "+7",
+				})
+
+
+				phoneEl.dataset.isDataBound = 'true';
+			})
+		}
     };
 })();

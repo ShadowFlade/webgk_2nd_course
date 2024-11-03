@@ -302,6 +302,11 @@ switch (LANGUAGE_ID)
 $this->addExternalJs($templateFolder.'/order_ajax.js');
 \Bitrix\Sale\PropertyValueCollection::initJs();
 $this->addExternalJs($templateFolder.'/script.js');
+
+$assets = Main\Page\Asset::getInstance();
+$this->addExternalJs('/local/node_modules/cleave.js/dist/cleave.js');
+$this->addExternalJs('/local/node_modules/cleave.js/dist/addons/cleave-phone.ru.js');
+
 ?>
 	<NOSCRIPT>
 		<div style="color:red"><?=Loc::getMessage('SOA_NO_JS')?></div>
