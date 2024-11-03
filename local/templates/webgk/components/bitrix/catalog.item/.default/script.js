@@ -2185,8 +2185,6 @@
                 if(arResult.data.WARNINGS && arResult.data.WARNINGS.length) {
                     strContent += `<p>${arResult.data.WARNINGS.join("\n")}</p>`;
                 }
-                console.log(arResult,' ar result');
-                console.log(strContent,' str content');
                 this.obPopupWin.setTitleBar(successful ? BX.message('TITLE_SUCCESSFUL') : BX.message('TITLE_ERROR'));
                 this.obPopupWin.setContent(strContent);
                 this.obPopupWin.setButtons(buttons);

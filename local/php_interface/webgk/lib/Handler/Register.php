@@ -1,4 +1,5 @@
 <?php
+
 namespace Webgk\Handler;
 
 class Register
@@ -29,7 +30,14 @@ class Register
 
     private static function initSaleHandlers()
     {
-
+        self::$eventManager->addEventHandler(
+            "sale",
+            "onSaleDeliveryServiceCalculate",
+            [
+                '\Webgk\Handler\Sale\Order',
+                'onSaleDeliveryServiceCalculate'
+            ]
+        );
     }
 
     private static function initCatalogHandlers()
