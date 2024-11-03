@@ -5848,14 +5848,19 @@ class SaleOrderAjax extends \CBitrixComponent
 			}
 		}
 
-		CSaleOrderUserProps::DoSaveUserProfile(
-			$this->order->getUserId(),
-			$profileId,
-			$profileName,
-			$this->order->getPersonTypeId(),
-			$properties,
-			$arResult["ERROR"]
-		);
+//		if($this->arParams['SAVE_USER_PROFILE'] != 'N') {
+            CSaleOrderUserProps::DoSaveUserProfile(
+                $this->order->getUserId(),
+                $profileId,
+                $profileName,
+                $this->order->getPersonTypeId(),
+                $properties,
+                $arResult["ERROR"]
+            );
+//        } else {
+//            \Bitrix\Main\Diag\Debug::writeToFile('im debugging hard', date("d.m.Y H:i:s"), "local/log.log");
+//        }
+
 	}
 
 	protected function addStatistic()

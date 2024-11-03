@@ -2,7 +2,7 @@
 define("HIDE_SIDEBAR", true);
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("Заказы");
-?><?$APPLICATION->IncludeComponent("bitrix:sale.order.ajax", "bootstrap_v4", array(
+?><?$APPLICATION->IncludeComponent("webgk:sale.order.ajax", "bootstrap_v4", array(
 	"PAY_FROM_ACCOUNT" => "Y",
 	"COUNT_DELIVERY_TAX" => "N",
 	"COUNT_DISCOUNT_4_ALL_QUANTITY" => "N",
@@ -27,7 +27,9 @@ $APPLICATION->SetTitle("Заказы");
 	"USER_CONSENT" => "Y",
 	"USER_CONSENT_ID" => "1",
 	"USER_CONSENT_IS_CHECKED" => "Y",
-	"USER_CONSENT_IS_LOADED" => "Y"
+	"USER_CONSENT_IS_LOADED" => "Y",
+//    'SAVE_USER_PROFILE' => 'N'
+    'ALLOW_USER_PROFILES' => 'N'
 	),
 	false
 );?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

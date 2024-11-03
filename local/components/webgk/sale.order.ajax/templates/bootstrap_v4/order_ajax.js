@@ -81,8 +81,10 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			this.initializePrimaryFields();
 
 			this.result = parameters.result || {};
+			console.log(this.result,' thi s result')
 			this.prepareLocations(parameters.locations);
 			this.params = parameters.params || {};
+			console.log(this.params,' params')
 			this.signedParamsString = parameters.signedParamsString || '';
 			this.siteId = parameters.siteID || '';
 			this.ajaxUrl = parameters.ajaxUrl || '';
@@ -4552,6 +4554,8 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					}
 				});
 
+				console.log(input,' delivery location input');
+
 				altNode.appendChild(label);
 				altNode.appendChild(input);
 				node.appendChild(altNode);
@@ -4652,6 +4656,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 						value: zipProperty.VALUE
 					}
 				});
+				console.log(input,' zip property input');
 
 				propsItemNode.appendChild(label);
 				propsItemNode.appendChild(input);
@@ -5601,6 +5606,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 
 					if (input)
 						BX.addClass(input, 'form-control');
+
 				}
 				else
 				{
@@ -7209,6 +7215,7 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 			{
 				inputs[i].placeholder = settings.DESCRIPTION;
 				BX.addClass(inputs[i], 'form-control bx-ios-fix');
+
 			}
 
 			del = propContainer.querySelectorAll('label');

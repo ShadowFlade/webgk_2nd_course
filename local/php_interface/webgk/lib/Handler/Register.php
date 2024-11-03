@@ -38,15 +38,15 @@ class Register
                 'onSaleDeliveryServiceCalculate'
             ]
         );
-        self::$eventManager->addEventHandler(
-            "sale",
-            "OnSaleComponentOrderResultPrepared",
-            [
-                '\Webgk\Handler\Sale\Order',
-                'onOrderChange'
-            ]
-
-        );
+//        self::$eventManager->addEventHandler(
+//            "sale",
+//            "OnSaleComponentOrderResultPrepared",
+//            [
+//                '\Webgk\Handler\Sale\Order',
+//                'onOrderChange'
+//            ]
+//
+//        );
     }
 
     private static function initCatalogHandlers()
