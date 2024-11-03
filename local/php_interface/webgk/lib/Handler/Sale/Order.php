@@ -45,7 +45,7 @@ class Order
         foreach ($order->getPropertyCollection() as $prop) {
             /** @var \Bitrix\Sale\PropertyValue $prop */
             $value = '';
-            \Bitrix\Main\Diag\Debug::writeToFile($prop, date("d.m.Y H:i:s"), "local/prop.log");
+            \Bitrix\Main\Diag\Debug::writeToFile([$prop], date("d.m.Y H:i:s"), "local/prop.log");
 
             switch ($prop->getField('CODE')) {
                 case 'FIO':
