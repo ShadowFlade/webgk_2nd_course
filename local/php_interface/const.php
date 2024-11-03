@@ -16,3 +16,5 @@ define('NEW_CATALOG_TP_IBLOCK_ID', 56);
 define('ADD_2_BASKET_URL', '/catalog/add2basket.php');
 define('MINIMAL_PRICE_FOR_FREE_DELIVERY_BASKET', 1000);
 define('DELIVERY_COURIER_CUSTOM_ID', 8);
+define('PAYER_TYPE_PHYS', 1);
+define('PAYER_TYPE_JUR', 2);

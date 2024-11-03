@@ -111,7 +111,7 @@ class UserService
 
         if (!empty($fields['UF_TYPE'])) {
             $ufType = $this->GetCustomUserField('UF_TYPE', true);
-            $sec1 =array_filter($ufType['VARIANTS'],fn($variant) => $variant['XML_ID'] == $REQUEST['UF_TYPE']);
+            $sec1 = array_filter($ufType['VARIANTS'], fn($variant) => $variant['XML_ID'] == $REQUEST['UF_TYPE']);
             $selectedVariant = $sec1[$fields['UF_TYPE']]['ID'];
             \Bitrix\Main\Diag\Debug::writeToFile(['variant' => $selectedVariant], date("d.m.Y H:i:s"), "local/log.log");
 
@@ -182,5 +182,50 @@ class UserService
         \Bitrix\Main\Diag\Debug::writeToFile(['user fields from custom' => $userFields], date("d.m.Y H:i:s"), "local/log.log");
 
         return $userFields;
+    }
+
+    public static function getUserFieldByPayerTypeId($payerTypeId)
+    {
+
+        if ($payerTypeId == PAYER_TYPE_PHYS) {
+            $userFields = self::getPhysUserFields();
+        } else if ($payerTypeId == PAYER_TYPE_JUR) {
+            $userFields = self::getJurUserFields();
+        } else {
+            global $APPLICATION;
+            $APPLICATION->ThrowException('No such payer id (' . $payerTypeId . ')');
+            return false;
+        }
+    }
+
+    private static function getPhysUserFields()
+    {
+        $query = new Query(UserFieldTable::getEntity());
+        $query->setSelect([
+            'NAME',
+            'LAST_NAME',
+            'SECOND_NAME',
+            'EMAIL'
+        ]);
+        global $USER;
+        $query->setFilter([
+            'ID' => $USER->GetId()
+        ]);
+        $result = $query->exec()->fetch();
+        return $result;
+    }
+
+    private static function getJurUserFields()
+    {
+        $query = new Query(UserFieldTable::getEntity());
+        $query->setSelect([
+            'UF_INN', 'UF_KPP', 'WORK_COMPANY'
+        ]);
+        global $USER;
+        $query->setFilter([
+            'ID' => $USER->GetId()
+        ]);
+        $result = $query->exec()->fetch();
+        return $result;
     }
 }

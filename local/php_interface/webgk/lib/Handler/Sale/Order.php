@@ -24,4 +24,63 @@ class Order
             )
         );
     }
+
+    public static function onOrderChange($order, &$arUserResult, $request, &$arParams, &$arResult)
+    {
+        \Bitrix\Main\Diag\Debug::writeToFile([$order], date("d.m.Y H:i:s"), "local/realorder.log");
+        \Bitrix\Main\Diag\Debug::writeToFile($arResult, date("d.m.Y H:i:s"), "local/arResultReal.log");
+
+
+
+        global $USER;
+        $arUser = $USER->GetByID(intval($USER->GetID()))
+            ->Fetch();
+
+        if (is_array($arUser)) {
+            $fio = $arUser['LAST_NAME'] . ' ' . $arUser['NAME'] . ' ' . $arUser['SECOND_NAME'];
+            $fio = trim($fio);
+            $arUser['FIO'] = $fio;
+        }
+
+        foreach ($order->getPropertyCollection() as $prop) {
+            /** @var \Bitrix\Sale\PropertyValue $prop */
+            $value = '';
+            \Bitrix\Main\Diag\Debug::writeToFile($prop, date("d.m.Y H:i:s"), "local/prop.log");
+
+            switch ($prop->getField('CODE')) {
+                case 'FIO':
+                    $value = $request['contact']['family'];
+                    $value .= ' ' . $request['contact']['name'];
+                    $value .= ' ' . $request['contact']['second_name'];
+
+                    $value = trim($value);
+                    if (empty($value)) {
+                        $value = $arUser['FIO'];
+                    }
+                    break;
+
+                default:
+            }
+
+            if (empty($value)) {
+                foreach ($request as $key => $val) {
+                    if (strtolower($key) == strtolower($prop->getField('CODE'))) {
+                        $value = $val;
+                    }
+                }
+            }
+
+            if (empty($value)) {
+                $value = $prop->getProperty()['DEFAULT_VALUE'];
+            }
+
+            if (!empty($value)) {
+                $prop->setValue($value);
+            }
+        }
+        \Bitrix\Main\Diag\Debug::writeToFile($arUserResult, date("d.m.Y H:i:s"), "local/aruserresult.log");
+        \Bitrix\Main\Diag\Debug::writeToFile([$request], date("d.m.Y H:i:s"), "local/request.log");
+        \Bitrix\Main\Diag\Debug::writeToFile($arParams, date("d.m.Y H:i:s"), "local/arparam.log");
+
+    }
 }
