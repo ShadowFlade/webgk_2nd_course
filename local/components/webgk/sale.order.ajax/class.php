@@ -5848,7 +5848,7 @@ class SaleOrderAjax extends \CBitrixComponent
 			}
 		}
 
-//		if($this->arParams['SAVE_USER_PROFILE'] != 'N') {
+        if($this->arParams['ALLOW_USER_PROFILES'] == 'Y') {
             CSaleOrderUserProps::DoSaveUserProfile(
                 $this->order->getUserId(),
                 $profileId,
@@ -5857,9 +5857,9 @@ class SaleOrderAjax extends \CBitrixComponent
                 $properties,
                 $arResult["ERROR"]
             );
-//        } else {
-//            \Bitrix\Main\Diag\Debug::writeToFile('im debugging hard', date("d.m.Y H:i:s"), "local/log.log");
-//        }
+        } else {
+            \Bitrix\Main\Diag\Debug::writeToFile('im debugging hard shouldnt be allowed to save user profiles', date("d.m.Y H:i:s"), "local/log.log");
+        }
 
 	}
 

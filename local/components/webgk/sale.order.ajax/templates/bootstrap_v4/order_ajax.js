@@ -4290,12 +4290,15 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 
 				regionNode = BX.create('DIV', {props: {className: 'bx_soa_location row'}});
 				regionNodeCol = BX.create('DIV', {props: {className: 'col'}});
+				const deliveryAddressNodeCol = BX.create('DIV', {props: {className: 'col'}});
 
 				this.getPersonTypeControl(regionNodeCol);
 
 				this.getProfilesControl(regionNodeCol);
 
 				this.getDeliveryLocationInput(regionNodeCol);
+
+				this.renderDeliveryAddress(deliveryAddressNodeCol);
 
 				if (!this.result.SHOW_AUTH)
 				{
@@ -4316,6 +4319,8 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 
 				regionNode.appendChild(regionNodeCol);
 				regionContent.appendChild(regionNode);
+				regionContent.appendChild(deliveryAddressNodeCol);
+
 				this.getBlockFooter(regionContent);
 			}
 		},
@@ -6813,7 +6818,9 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					this.insertFileProperty(property, propsItemNode, disabled);
 					break;
 				case 'STRING':
-					this.insertStringProperty(property, propsItemNode, disabled);
+                    if(this.getPropertCode(property.getId()) !== 'ADDRESS'){
+                        this.insertStringProperty(property, propsItemNode, disabled);
+                    }
 					break;
 				case 'ENUM':
 					this.insertEnumProperty(property, propsItemNode, disabled);
@@ -6825,7 +6832,9 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					this.insertNumberProperty(property, propsItemNode, disabled);
 			}
 
-			propsItemsContainer.appendChild(propsItemNode);
+            if(this.getPropertCode(property.getId()) !== 'ADDRESS'){
+                propsItemsContainer.appendChild(propsItemNode);
+            }
 		},
 
 		insertLocationProperty: function(property, propsItemNode, disabled)
@@ -8398,6 +8407,63 @@ BX.namespace('BX.Sale.OrderAjaxComponent');
 					BX.addCustomEvent(control, BX.UserConsent.events.refused, BX.proxy(this.disallowOrderSave, this));
 				}
 			}, this));
-		}
-	};
+		},
+
+		renderDeliveryAddress: function(node)
+		{
+			var currentProperty, k, input,  isRender;
+
+			for (k in this.result.ORDER_PROP.properties)
+			{
+				if (this.result.ORDER_PROP.properties.hasOwnProperty(k))
+				{
+					currentProperty = this.result.ORDER_PROP.properties[k];
+					if (currentProperty.IS_ADDRESS == 'Y')
+					{
+						isRender = true;
+						break;
+					}
+				}
+			}
+
+			if(!isRender) {
+				return;
+			}
+
+			const container = BX.create('DIV', {
+				attrs: {'data-property-id-row': currentProperty.ID},
+				props: {className: "form-group bx-soa-location-input-container"}
+			});
+			const labelInnerHtml = (currentProperty.REQUIRED == 'Y' ? '<span class="bx-authform-starrequired">*</span> ' : '')
+				+ BX.util.htmlspecialchars(currentProperty.NAME)
+				+ (currentProperty.DESCRIPTION.length ? ' <small>(' + BX.util.htmlspecialchars(currentProperty.DESCRIPTION) + ')</small>' : '')
+
+			const label = document.createElement('label');
+            label.innerHTML = labelInnerHtml
+
+			input = BX.create('INPUT', {
+				props: {
+					id: `soa-property-${currentProperty.ID}`,
+					type: 'text',
+					placeholder: currentProperty.VALUE,
+					autocomplete: 'address',
+					className: 'form-control bx-soa-customer-input bx-ios-fix',
+					name: 'ORDER_PROP_' + currentProperty.ID,
+					value: currentProperty.VALUE
+				}
+			});
+
+
+			container.appendChild(label);
+			container.appendChild(input);
+			node.appendChild(container);
+
+			this.bindValidation(currentProperty.ID, container);
+		},
+
+        getPropertCode: function(propId, code){
+            const property = this.result.ORDER_PROP.properties.find(item => item.ID == propId);
+            return property ? property.CODE : null;
+        }
+    };
 })();
