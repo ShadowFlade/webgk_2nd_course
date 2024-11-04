@@ -38,15 +38,12 @@ class Register
                 'onSaleDeliveryServiceCalculate'
             ]
         );
-//        self::$eventManager->addEventHandler(
-//            "sale",
-//            "OnSaleComponentOrderResultPrepared",
-//            [
-//                '\Webgk\Handler\Sale\Order',
-//                'onOrderChange'
-//            ]
-//
-//        );
+
+        self::$eventManager->addEventHandler(
+            'sale',
+            'onSalePaySystemRestrictionsClassNamesBuildList',
+            ['\Webgk\Service\Sale\Pay', 'initPaySystemRestrictionByGroup']
+        );
     }
 
     private static function initCatalogHandlers()
@@ -63,5 +60,7 @@ class Register
     {
         self::$eventManager->addEventHandler('search', 'BeforeIndex', ['\Webgk\Service\Search\Index', 'BeforeIndexHandler']);
     }
+
+
 }
 
