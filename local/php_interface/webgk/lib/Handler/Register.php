@@ -15,7 +15,7 @@ class Register
         self::initCatalogHandlers();
         self::initUserHandlers();
         self::initSearchHandlers();
-
+        self::initCustomProps();
     }
 
     private static function initIblockHandlers()
@@ -59,6 +59,15 @@ class Register
     private static function initSearchHandlers()
     {
         self::$eventManager->addEventHandler('search', 'BeforeIndex', ['\Webgk\Service\Search\Index', 'BeforeIndexHandler']);
+    }
+
+    private static function initCustomProps()
+    {
+        self::$eventManager->addEventHandler(
+            'iblock',
+            'OnIBlockPropertyBuildList',
+            ['\Webgk\UserType\ProductStoreBind', 'GetUserTypeDescription']
+        );
     }
 
 
