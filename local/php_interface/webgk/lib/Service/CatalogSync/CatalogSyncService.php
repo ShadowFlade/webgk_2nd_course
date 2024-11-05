@@ -5,6 +5,7 @@ namespace Webgk\Service\CatalogSync;
 use Bitrix\Catalog\PriceTable;
 use Bitrix\Catalog\StoreProductTable;
 use Bitrix\Iblock\PropertyTable;
+use Protobuf\Exception;
 
 
 class CatalogSyncService
@@ -481,6 +482,7 @@ class CatalogSyncService
                 $createdIBElementIds
             );
 
+
             if ($offerResult['ACTION'] == 'CREATED' && empty($offerResult['ERRORS'])) {
                 $createdProductsIds[] = $offerResult['ID'];
                 $this->addProduct(
@@ -509,6 +511,7 @@ class CatalogSyncService
                 $this->updatePrices(
                     $prices,
                     $existingPrices,
+                    $el['ID'],
                     $offerResult['ID'],
                     $updatedPricesIds
                 );
@@ -709,9 +712,11 @@ class CatalogSyncService
 
     private function addPrices(array $prices, int $currProductId, int $productId, array &$addedPricesIds)
     {
-//        \Bitrix\Main\Diag\Debug::writeToFile($prices, date("d.m.Y H:i:s"), "local/log.log");
+        \Bitrix\Main\Diag\Debug::writeToFile($prices, date("d.m.Y H:i:s"), "local/log.log");
 
         foreach ($prices[$currProductId] as $newPrice) {
+            \Bitrix\Main\Diag\Debug::writeToFile($newPrice, date("d.m.Y H:i:s"), "local/oneprice.log");
+
             if (empty($newPrice)) {
                 $errMessage = 'New price not found: could not add new price';
                 $this->logger->logError($errMessage);
@@ -737,29 +742,33 @@ class CatalogSyncService
                 return ['ERRORS' => $err];
             }
         }
+
     }
 
     private
     function updatePrices(
         $newPrices,
         $existingPrices,
+        $currProductId,
         $newProductId,
         &$updatedPricesIds
     )
     {
 
-        foreach ($newPrices as $productId => $catalogGroupPriceArray) {
-            foreach ($catalogGroupPriceArray as $catalogGroupId => $newPrice) {
-
+        foreach ($newPrices[$currProductId] as $catalogGroupId => $newPrice) {
+            try {
                 $updateRes = \Bitrix\Catalog\PriceTable::update(
                     $existingPrices[$newProductId][$catalogGroupId]['ID'],
                     array_merge($newPrice, ['PRODUCT_ID' => $newProductId])
                 );
-                if ($updateRes->isSuccess()) {
-                    $updatedPricesIds[] = $updateRes->getId();
-                } else {
-                    $this->logger->logError(['update' => $updateRes->getErrorMessages()]);
-                }
+            } catch (\Exception $e) {
+                throw new Exception("Could not update product with id: {$newProductId} and catalog group id {$catalogGroupId}");
+            }
+
+            if ($updateRes->isSuccess()) {
+                $updatedPricesIds[] = $updateRes->getId();
+            } else {
+                $this->logger->logError(['update' => $updateRes->getErrorMessages()]);
             }
         }
 
