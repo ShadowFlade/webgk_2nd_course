@@ -1,5 +1,9 @@
 <?php
 
+//TECH
+define('SESSION_DATA_CONTAINER', 'webgk');
+
+
 //USER
 define('USER_GROUP_CODE_PARTNERS', 'PARTNERS');
 define('USER_GROUP_CAN_VOTE_RESPECT_ID', 4);

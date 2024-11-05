@@ -67,7 +67,7 @@ $trendFilter = array('PROPERTY_TREND' => '4');
 		"FILTER_NAME" => "",
 		"HIDE_NOT_AVAILABLE" => "N",
 		"HIDE_NOT_AVAILABLE_OFFERS" => "N",
-		"IBLOCK_ID" => "23",
+		"IBLOCK_ID" => get_iblock_id('catalog_new'),
 		"IBLOCK_TYPE" => "catalog_new",
 		"IBLOCK_TYPE_ID" => "catalog_new",
 		"INCLUDE_SUBSECTIONS" => "Y",

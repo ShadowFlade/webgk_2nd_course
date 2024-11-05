@@ -7,7 +7,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
     "bootstrap_v4",
     [
         "IBLOCK_TYPE" => "catalog_new",
-        "IBLOCK_ID" => NEW_CATALOG_IBLOCK_ID,
+        "IBLOCK_ID" => get_iblock_id('catalog_new'),
         "TEMPLATE_THEME" => "site",
         "HIDE_NOT_AVAILABLE" => "N",
         "BASKET_URL" => "/personal/cart/",
