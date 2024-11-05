@@ -2364,3 +2364,61 @@ $this->setFrameMode(true);
                 </script>
             <?endif;?>
 
+//comments
+//1.Bitrix\Main\Page\Asset::getInstance() вызвать бы один раз и вынести в переменную
+//2. логику вынести в result_modifier.php - все такого рода:
+            $viewedIterator = \Bitrix\Catalog\CatalogViewedProductTable::getList(
+            array(
+            'select' => array(
+            'PRODUCT_ID',
+            'ELEMENT_ID'
+            ),
+            'filter' => array(
+            '=FUSER_ID' => $basketUserId,
+            '=SITE_ID' => SITE_ID
+            ),
+            'order' => array('DATE_VISIT' => 'DESC'),
+            'limit' => 10
+            )
+            );
+
+            while ($arFields = $viewedIterator->fetch()) {
+            $arViewed[] = $arFields['ELEMENT_ID'];
+            }
+3. что-то для рендеринга я бы лично вынес в functions.php рядом, но тут такого точно не должно быть
+            (мб стоит в Helpers вынести куда-то, не так важно):                 function create_marketplace_table($p0, $p1, $p2, $p3, $p4)
+            {
+            $type_discont = ($p4 == 'PROMO_PROC') ? '%' : ' руб';
+            $market_table = '';
+
+            if ($p0 == 'PROMO_OZON') :
+            $market_table .= '<a href="' . $p1 . '" data-discount="' . $p2 . '" data-code="' . $p3 . '" data-typediscont="' . $type_discont . '"><img src="/local/templates/aist/assets/img/market1c.png" alt=""></a>';
+            endif;
+            if ($p0 == 'PROMO_WILDBERRIES') :
+            $market_table .= '<a href="' . $p1 . '" data-discount="' . $p2 . '" data-code="' . $p3 . '" data-typediscont="' . $type_discont . '"><img src="/local/templates/aist/assets/img/market2c.png" alt=""></a>';
+            endif;
+            if ($ap0 == 'PROMO_SBERMEGAMARKET') :
+            $market_table .= '<a href="' . $p1 . '" data-discount="' . $p2 . '" data-code="' . $p3 . '" data-typediscont="' . $type_discont . '"><img src="/local/templates/aist/assets/img/market3c.png" alt=""></a>';
+            endif;
+            if ($ap0 == 'PROMO_YAMARKET') :
+            $market_table .= '<a href="' . $p1 . '" data-discount="' . $p2 . '" data-code="' . $p3 . '" data-typediscont="' . $type_discont . '"><img src="/local/templates/aist/assets/img/market4c.png" alt=""></a>';
+            endif;
+
+            return $market_table;
+            }
+3. что-то можно вообще в отдельные компоненты (или хотя бы шаблоны) вынести - оценки например
+4. подобное вынес бы в php_interface/functions
+            $date = date("Y-m-d");
+            $timestamp = strtotime($date);
+            $weekday = date("l", $timestamp);
+            $normalized_weekday = strtolower($weekday);
+            if ($normalized_weekday == "sunday") {
+            echo "Завтра";
+            } else {
+            $time = date("H");
+            if ($time > 16) {
+            echo 'Завтра';
+            } else {
+            echo "Сегодня";
+            }
+            }
