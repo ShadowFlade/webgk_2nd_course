@@ -20,9 +20,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [124, 125, 126, 127, 128, 129, 130];
+    private $SECTIONS_IN_IDS = [140, 141, 142];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 131;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 143;
 
 
     private $PROP_TYPES = [
@@ -854,8 +854,21 @@ class CatalogSyncService
         }
     }
 
+    //тут мы по хэшмапу определяем какой раздел в какой раздел должен переходить, если раздел не найден,
+    // то берется дефолтное значение и все пихается в new_products с деактивацией - слева значение из каталога 1с
+    // - справа из нашего новосозданного каталога
     private function getSectionsMap()
     {
+        $sectionInOutMap = [
+            'accessories' => 'accessories',
+            'sportswear' => 'sportswear',
+            't-shirts' => 'odezhda',
+            'underwear' => 'odezhda',
+            'pants' => 'odezhda',
+            'dresses' => 'odezhda',
+            'shoes' => 'odezhda',
+            'default' => 'new-products'
+        ];
         $sectionsInDB = \Bitrix\Iblock\SectionTable::getList([
             'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
             'select' => ['ID', 'CODE', 'IBLOCK_SECTION_ID'],
@@ -876,9 +889,13 @@ class CatalogSyncService
                 $sectionsIn[$sectionIn['ID']] = $sectionsIn[$sectionIn['IBLOCK_SECTION_ID']];//setting subsections
                 $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionsIn[$sectionIn['ID']]['CODE']]['ID'];
             } else {
-
                 $sectionsIn[$sectionIn['ID']] = $sectionIn;//setting top level sections
-                $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionIn['CODE']]['ID'];
+
+                if (isset($sectionInOutMap[$sectionIn['CODE']])) {
+                    $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionInOutMap[$sectionIn['CODE']]]['ID'];
+                } else if (!isset($sectionInOutMap[$sectionIn['CODE']])) {
+                    $sectionsIn[$sectionIn['ID']]['ID'] = $sectionsOut[$sectionInOutMap['default']]['ID'];
+                }
             }
         }
 

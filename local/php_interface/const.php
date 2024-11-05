@@ -15,8 +15,8 @@ define('CAPTCHA_SECERET', '6LcsgVspAAAAAH_pm-YzqO5mwvCM0heJBfZ_F139');
 //CATALOG
 define('CATALOG_1C_IBLOCK_ID', 2);
 define('CATALOG_1C_TP_IBLOCK_ID', 3);
-define('NEW_CATALOG_IBLOCK_ID', 55);
-define('NEW_CATALOG_TP_IBLOCK_ID', 56);
+define('NEW_CATALOG_IBLOCK_ID', 61);
+define('NEW_CATALOG_TP_IBLOCK_ID', 62);
 
 //SALE
 define('ADD_2_BASKET_URL', '/catalog/add2basket.php');
