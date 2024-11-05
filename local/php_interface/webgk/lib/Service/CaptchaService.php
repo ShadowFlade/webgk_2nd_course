@@ -1,4 +1,5 @@
 <?php
+
 namespace Webgk\Service;
 
 
@@ -6,13 +7,14 @@ class CaptchaService
 {
     public $IS_VALID = false;
     private $LOG_FILE = 'logs/captcha/captchaBotLog.log';
-    private $SECRET_KEY = "6LfmoCkqAAAAANCNWUSHG1sjFYjDoXeFTrVwjqsA";
+    private $SECRET_KEY;
     private $MIN_SCORE = 0.5;
     private $RECAPTCHA_URL = "https://www.google.com/recaptcha/api/siteverify";
 
     public function __construct($data)
     {
         $this->IS_VALID = $this->validate($data);
+        $this->SECRET_KEY = CAPTCHA_SECERET;
     }
 
     public function validate($data)
@@ -39,7 +41,6 @@ class CaptchaService
 
         if (!empty($decoded_response) && $decoded_response['success'] && $decoded_response['score'] > $this->MIN_SCORE) {
             // $this->log("Captcha validation: success " . $decoded_response['score'], false);
-            \Bitrix\Main\Diag\Debug::writeToFile(['catpcha score' => $decoded_response['score']], date("d.m.Y H:i:s"), "local/log.log");
 
             return true;
         } else {

@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function captchaExecute() {
         return new Promise((resolve, reject) => {
-            window.grecaptcha.execute('6LfmoCkqAAAAAAcbZpEg4WcicDd_Q5CW19KkSATL', {action: 'call_your_mom'}).then(function (token) {
+            window.grecaptcha.execute(window.CAPTCHA_PUBLIC, {action: 'call_your_mom'}).then(function (token) {
                 resolve(token);
             }).catch(error => {
                 reject(error);
@@ -66,24 +66,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
     });
-
-    function appendFormData(form, data) {
-        if (form.dataset.appendForm) {
-            const appendForm = document.querySelector(`#${form.dataset.appendForm}`);
-
-            const appendData = new FormData(appendForm);
-
-
-            [...appendData.entries()].forEach(item => {
-                data.append(item[0], item[1])
-            })
-
-
-            return data;
-        }
-
-        return data;
-    }
-
-
 })
