@@ -343,12 +343,15 @@ class CatalogSyncService
                 $isActive = false;
             }
 
+            $detailPicture = \CFile::MakeFileArray($fields['DETAIL_PICTURE']);
 
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
                 'CODE' => $fields['CODE'],
                 'IBLOCK_SECTION_ID' => $newSectionId,
+                'DETAIL_PICTURE' => $detailPicture,
+                'DETAIL_TEXT' => $fields['DETAIL_TEXT'],
                 'PROPERTY_VALUES' => $allProps,
                 'ACTIVE' => $isActive ? 'Y' : 'N'
             ];
@@ -464,11 +467,15 @@ class CatalogSyncService
                 $allProps['CML2_LINK'] = $this->existingElsMain[$el['CODE']]['ID'];
             }
 
+            $detailPicture = \CFile::MakeFileArray($fields['DETAIL_PICTURE']);
+
 
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT,
                 'NAME' => $fields['NAME'],
                 'CODE' => $fields['CODE'],
+                'DETAIL_PICTURE' => $detailPicture,
+                'DETAIL_TEXT' => $fields['DETAIL_TEXT'],
                 'PROPERTY_VALUES' => $allProps,
             ];
 
@@ -712,10 +719,8 @@ class CatalogSyncService
 
     private function addPrices(array $prices, int $currProductId, int $productId, array &$addedPricesIds)
     {
-        \Bitrix\Main\Diag\Debug::writeToFile($prices, date("d.m.Y H:i:s"), "local/log.log");
 
         foreach ($prices[$currProductId] as $newPrice) {
-            \Bitrix\Main\Diag\Debug::writeToFile($newPrice, date("d.m.Y H:i:s"), "local/oneprice.log");
 
             if (empty($newPrice)) {
                 $errMessage = 'New price not found: could not add new price';
