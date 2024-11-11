@@ -99,7 +99,7 @@ class UserService
             'NAME' => $fields['NAME'],
             'LAST_NAME' => $fields['LAST_NAME'],
             'WORK_COMPANY' => $fields['WORK_COMPANY'],
-            'UF_INN' => $fields['UF_INN'],
+            'UF_INN' => (int)$fields['UF_INN'],
             'UF_KPP' => $fields['UF_KPP'],
             'GROUP_ID' => [
                 USER_GROUP_CAN_VOTE_RESPECT_ID,
