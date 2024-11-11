@@ -100,7 +100,7 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                 </tbody>
                 <tfoot>
                 <tr>
-                    <td></td>
+                    <td class="back-error js-back-error"></td>
                     <td><input type="submit" name="code_submit_button"
                                value="<? echo GetMessage("main_register_sms_send") ?>"/></td>
                 </tr>
@@ -331,7 +331,7 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                 </tbody>
                 <tfoot>
                 <tr>
-                    <td></td>
+                    <td class="back-error js-back-error"></td>
                     <td><input type="submit" name="register_submit_button" value="<?= GetMessage("AUTH_REGISTER") ?>"/>
                     </td>
                 </tr>

@@ -10,35 +10,40 @@ class Exchange1C
 
         $list = [];
         $map = [
-            'import.xml' => 'Импорт',
-            'offers.xml' => 'Торговые предложения',
-            'references.xml' => 'Пользовательские справочники',
-            'rests.xml' => 'Остатки',
-            'prices.xml' => 'Цены'
+            'import' => 'Импорт',
+            'offers' => 'Торговые предложения',
+            'references' => 'Пользовательские справочники',
+            'rests' => 'Остатки',
+            'prices' => 'Цены'
         ];
         if ($handle = opendir($root . '/upload')) {
             while (false !== ($entry = readdir($handle))) {
-                if ($entry == "." && $entry == "..") {
+                if ($entry == "." && $entry == ".." && empty($entry)) {
                     continue;
                 }
                 if (!str_contains($entry, "1c_catalog")) {
                     continue;
                 }
-                $files = array_filter(scandir($root . '/upload/' . $entry), fn($file) => $file != '.' && $file != '..');
+                $files = array_filter(scandir($root . '/upload/' . $entry), fn($file) => $file != '.' && $file != '..' && !empty($file));
                 $importNumber = null;
                 preg_match('/\d$/', $entry, $importNumber);
                 $changeTime = filectime($root . '/upload/' . $entry);
                 $changeTimeFormatted = date('Y-m-d H:i:s', $changeTime);
+                foreach ($map as $proposedFileName => $locFileName) {
+                    $fileName = '';
 
+                    if (str_contains($locFileName, $proposedFileName)) {
+                        $fileName = $locFileName;
+                    }
+                }
                 $list[] = [
                     'exchangeName' => 'Выгрузка ' . $importNumber[0] ?: '',
                     'exchange_date' => $changeTime,
                     'exchage_date_formatted' => $changeTimeFormatted,
                     'files' => array_map(fn($item) => [
-                        'path' => $root . '/upload/' . $entry . '/' . $item,
-                        'name' => $map[basename($item)],
-                    ], $files
-                    )
+                        'path' => 'https://' . $_SERVER['HTTP_HOST'] . '/upload/' . $entry . '/' . $item,
+                        'name' => self::getFileNamePublicView(basename($item), $map),
+                    ], $files)
                 ];
             }
             closedir($handle);
@@ -46,6 +51,18 @@ class Exchange1C
         usort($list, fn($item1, $item2) => $item1['exchange_date'] < $item2['exchange_date']);
         return $list;
 
+    }
+
+    private static function getFileNamePublicView($filename, $map)
+    {
+        $resFilename = '';
+        foreach ($map as $proposedFileName => $locFileName) {
+            if (str_contains($filename, $proposedFileName)) {
+                $resFilename = $locFileName;
+                break;
+            }
+        }
+        return $resFilename;
     }
 
     public static function ModifyAdminMenu(&$adminMenu, &$moduleMenu)

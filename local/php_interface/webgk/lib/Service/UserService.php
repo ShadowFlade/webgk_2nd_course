@@ -133,13 +133,7 @@ class UserService
         }
         $userId = $user->Add($newFields);
 
-
-        if (!$userId) {
-            throw new \Exception($user->LAST_ERROR, 22);
-        }
-
-
-        return $userId;
+        return ['ID' => $userId, 'ERROR' => $user->LAST_ERROR];
     }
 
     public function GetCustomUserField($fieldName, $isGetVariants = false)

@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const formWrapper = document.querySelector('.js-reg-form');
     const form = formWrapper.querySelector('form');
     const typeElHidden = document.querySelector("[name='REGISTER[UF_TYPE]']");
+    const errorEl = document.querySelector(".js-back-error");
+
     tabs.forEach(tab => {
         tab.addEventListener('click', (e) => {
             tabs.forEach(tab => tab.classList.remove('active'));
@@ -21,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeElHidden.value = "PHYSICAL";
                 jurFields.forEach(field => {field.removeAttribute('required');});
                 physFields.forEach(field => {field.setAttribute('required', '');});
-
-
 
             } else if (target.dataset.type == 'jur') {
                 formWrapper.classList.remove('reg-form__active--active-phys');
@@ -60,10 +60,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: data
             })
             const jData = await resp.json();
-            if (jData.redirect) {
+            if (jData.redirect && !jData.ERROR) {
+                hideBackendError()
                 window.location.replace('/auth')
+            } else if (jData.ERROR) {
+                showBackendError(jData.ERROR)
             }
         });
 
+        function showBackendError(errorText) {
+            errorEl.innerHTML = errorText;
+            errorEl.classList.add('active');
+        }
+        function hideBackendError() {
+            errorEl.innerHTML = "";
+            errorEl.classList.remove('active');
+        }
     });
 })

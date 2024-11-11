@@ -9,15 +9,30 @@ $isCaptchaValid = $userService->CheckCaptcha($_REQUEST);
 global $APPLICATION;
 
 if (!$isCaptchaValid) $APPLICATION->ThrowException('Капча не прошла проверку');
-\Bitrix\Main\Diag\Debug::writeToFile(['request start'=> $_REQUEST], date("d.m.Y H:i:s"), "local/log.log");
+\Bitrix\Main\Diag\Debug::writeToFile(['request start' => $_REQUEST], date("d.m.Y H:i:s"), "local/log.log");
 
-$id = $userService->CreateUser($_REQUEST['REGISTER']);
+$res = $userService->CreateUser($_REQUEST['REGISTER']);
 
 global $USER;
-$USER->Authorize($id);
+if ($res['ID']) {
+    $USER->Authorize($res['ID']);
+}
 $APPLICATION->RestartBuffer();
 //LocalRedirect('/auth/', false, '302');
-echo json_encode(['success' => true,'id' => $id,'redirect' => '/auth']);
+$result = [
+    'success' => !empty($res['ID']),
+    'id' => $res['ID'],
+    'redirect' => '/auth',
+    'ERROR' => $res['ERROR']
+
+];
+$response = new \Bitrix\Main\Engine\Response\Json(
+    $result,
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION
+);
+$response->setStatus(403);
+
+$response->send();
 
 
 //why this yields error?

@@ -14,7 +14,7 @@ class Index
             $arFields["PARAM2"],         // BLOCK_ID индексируемого свойства
             $arFields["ITEM_ID"],          // ID индексируемого свойства
             ["sort" => "asc"],       // Сортировка (можно упустить)
-            ["CODE" => "ARTNUMBER"])->Fetch();
+            ["CODE" => "CML2_ARTICLE"])->Fetch();
 
         if (empty($artNumber)) {
             return $arFields;

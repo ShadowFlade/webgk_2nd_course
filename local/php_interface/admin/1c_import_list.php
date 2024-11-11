@@ -19,9 +19,11 @@ $import1CList = \Webgk\Singletons\Exchange1C::get1CImportList();
 
                 <ul>
                     <? foreach ($directory['files'] as $file): ?>
-                        <li>
-                            <a download href="<?= $file['path'] ?>"><?= $file['name'] ?></a>
-                        </li>
+                        <? if (!empty($file['name'])): ?>
+                            <li>
+                                <a download="<?= $file['name'] ?>" href="<?= $file['path'] ?>"><?= $file['name'] ?></a>
+                            </li>
+                        <? endif ?>
                     <? endforeach ?>
                 </ul>
             </li>
