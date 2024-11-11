@@ -177,49 +177,4 @@ class UserService
 
         return $userFields;
     }
-
-    public static function getUserFieldByPayerTypeId($payerTypeId)
-    {
-
-        if ($payerTypeId == PAYER_TYPE_PHYS) {
-            $userFields = self::getPhysUserFields();
-        } else if ($payerTypeId == PAYER_TYPE_JUR) {
-            $userFields = self::getJurUserFields();
-        } else {
-            global $APPLICATION;
-            $APPLICATION->ThrowException('No such payer id (' . $payerTypeId . ')');
-            return false;
-        }
-    }
-
-    private static function getPhysUserFields()
-    {
-        $query = new Query(UserFieldTable::getEntity());
-        $query->setSelect([
-            'NAME',
-            'LAST_NAME',
-            'SECOND_NAME',
-            'EMAIL'
-        ]);
-        global $USER;
-        $query->setFilter([
-            'ID' => $USER->GetId()
-        ]);
-        $result = $query->exec()->fetch();
-        return $result;
-    }
-
-    private static function getJurUserFields()
-    {
-        $query = new Query(UserFieldTable::getEntity());
-        $query->setSelect([
-            'UF_INN', 'UF_KPP', 'WORK_COMPANY'
-        ]);
-        global $USER;
-        $query->setFilter([
-            'ID' => $USER->GetId()
-        ]);
-        $result = $query->exec()->fetch();
-        return $result;
-    }
 }
