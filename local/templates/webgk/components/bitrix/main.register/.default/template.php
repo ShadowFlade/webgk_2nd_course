@@ -37,7 +37,7 @@ $echoUserTypeClass = function ($field) use ($userService) {
         $class .= ' js-phys-field phys-field';
     }
 
-    if($field == 'UF_TYPE') {
+    if ($field == 'UF_TYPE') {
         $class .= ' custom-user-field--type';
     }
     $class .= ' custom-user-field';
@@ -180,7 +180,7 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                         <tr class="<?= $echoUserTypeClass($FIELD) ?>">
                             <td><?= GetMessage("REGISTER_FIELD_" . $FIELD) ?>
                                 :<span class="starrequired">*</span></td>
-                            <td ><?
+                            <td><?
                                 switch ($FIELD) {
                                     case "PASSWORD":
                                         ?><input size="30" type="password" name="REGISTER[<?= $FIELD ?>]"
@@ -241,9 +241,12 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                                 default:
                                 if ($FIELD == "PERSONAL_BIRTHDAY"): ?>
                                     <small><?= $arResult["DATE_FORMAT"] ?></small><br/><?endif;
-                                    ?><input size="30" type="text" class="<?= $extraClassesMap[$FIELD] ?>"
-                                                                               name="REGISTER[<?= $FIELD ?>]"
-                                                                               value="<?= $arResult["VALUES"][$FIELD] ?>" /><?
+
+                                    ?><input
+                                    <?= $FIELD == 'WORK_COMPANY' ? 'disabled' : '' ?>
+                                    size="30" type="text" class="<?= $extraClassesMap[$FIELD] ?>"
+                                    name="REGISTER[<?= $FIELD ?>]"
+                                    value="<?= $arResult["VALUES"][$FIELD] ?>" /><?
                                     if ($FIELD == "PERSONAL_BIRTHDAY")
                                         $APPLICATION->IncludeComponent(
                                             'bitrix:main.calendar',
@@ -267,23 +270,26 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                     <? foreach ($arResult["USER_PROPERTIES"]["DATA"] as $FIELD_NAME => $arUserField):
                         $arUserField['USER_TYPE']['USE_FIELD_COMPONENT'] = false; //use our custom templates
                         ?>
-                        <tr class="<?=$echoUserTypeClass($FIELD_NAME)?>">
+                        <tr class="<?= $echoUserTypeClass($FIELD_NAME) ?>">
                             <td><?= $arUserField["EDIT_FORM_LABEL"] ?>:<span
                                         class="starrequired">*</span></td>
                             <td>
                                 <?
 
                                 $systemFieldTemplatesMap = [
-                                        'enumeration' => 'enumeration_hidden',
-                                        'integer' => 'integer_inn_dadata'
+                                    'enumeration' => 'enumeration_hidden',
+                                    'integer' => 'integer_inn_dadata'
                                 ];
 
 
-                                if($arUserField['FIELD_NAME'] == 'UF_TYPE') {
+                                if ($arUserField['FIELD_NAME'] == 'UF_TYPE') {
                                     $arUserField['DEFAULT_VALUE'] = $userService->PHYS_TYPE;
                                 }
                                 $type = $arUserField["USER_TYPE"]["USER_TYPE_ID"];
-
+                                //echo "<pre>";
+                                //                                var_dump($arUserField['FIELD_NAME']) . "\n";
+                                //var_dump($arUserField['FIELD_NAME'] == 'UF_INN') . "\n";
+                                //echo "<pre/><br/>";
                                 $APPLICATION->IncludeComponent(
                                     "webgk:system.field.edit",
                                     $systemFieldTemplatesMap[$type] ?: $type,
@@ -293,6 +299,7 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                                         "form_name" => "regform",
                                         'input_name' => "REGISTER[{$arUserField['FIELD_NAME']}]",
                                         'extra_classes' => $extraClassesMap[$arUserField['FIELD_NAME']],
+                                        'is_disabled' => $arUserField['FIELD_NAME'] == 'UF_KPP'
                                     ],
                                     null,
                                     ["HIDE_ICONS" => "Y"]
@@ -313,16 +320,16 @@ $assets->addJs(SITE_TEMPLATE_PATH . '/components/bitrix/main.register/.default/d
                     <tr>
                         <td></td>
                         <td>
-                            <input  type="hidden" name="captcha_sid"
-                                                                     value="<?= $arResult["CAPTCHA_CODE"] ?>"/>
+                            <input type="hidden" name="captcha_sid"
+                                   value="<?= $arResult["CAPTCHA_CODE"] ?>"/>
                             <img src="/bitrix/tools/captcha.php?captcha_sid=<?= $arResult["CAPTCHA_CODE"] ?>"
                                  width="180" height="40" alt="CAPTCHA"/>
                         </td>
                     </tr>
                     <tr>
                         <td><?= GetMessage("REGISTER_CAPTCHA_PROMT") ?>:<span class="starrequired">*</span></td>
-                        <td><input  type="text" name="captcha_word" maxlength="50"
-                                                                     value="" autocomplete="off"/></td>
+                        <td><input type="text" name="captcha_word" maxlength="50"
+                                   value="" autocomplete="off"/></td>
                     </tr>
                     <?
                 }

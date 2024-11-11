@@ -5,7 +5,8 @@ $inputName = $arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]
      class="fields integer <?= $arParams['extra_input_class'] ?> js-dadata-inn"><?
     foreach ($arResult["VALUE"] as $res):?>
         <div class="fields integer">
-        <input type="text" list="<?= $inputName ?>"
+        <input
+                type="text" list="<?= $inputName ?>"
                name="<?= $inputName ?>" <?= $arParams["arUserField"]["EDIT_IN_LIST"] != "Y" ? 'disabled="disabled"' : '' ?>
                value="<?= $res ?>">
         <datalist class="js-dadata-inn__datalist" id="<?= $inputName ?>">

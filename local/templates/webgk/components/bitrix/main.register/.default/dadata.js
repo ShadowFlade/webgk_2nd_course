@@ -35,16 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const suggestions = data.suggestions.slice(0,10);
         const pickSuggestion = (target) => {
-            companyInput.value = target.dataset.company;
-            kppInput.value = target.dataset.kpp;
+            target.dataset.company && (companyInput.value = target.dataset.company);
+            target.dataset.kpp && (kppInput.value = target.dataset.kpp);
         }
 
         const suggestionsOptions = suggestions.map((suggestion) => {
+            console.log(suggestion,' suggestion');
             const el = document.createElement("option");
             el.value = suggestion.data.inn;
-            el.dataset.kpp = suggestion.data.kpp;
-            el.dataset.company = suggestion.value;
-            el.textContent = `ИНН: ${suggestion.data.inn} Компания: ${suggestion.value} <br/> КПП: ${suggestion.data.kpp} `;
+            suggestion.data.kpp && (el.dataset.kpp = suggestion.data.kpp);
+            suggestion.value && (el.dataset.company = suggestion.value);
+            el.textContent = `ИНН: ${suggestion.data.inn} Компания: ${suggestion.value || ''} <br/> КПП: ${suggestion.data.kpp || ''} `;
 
             pickSuggestion(el);
             return el
