@@ -7,7 +7,6 @@ $inputName = $arParams['input_name'] ?: $arParams["arUserField"]["FIELD_NAME"]
         <div class="fields integer">
         <input
                 onkeypress="return /[0-9]/i.test(event.key)"
-                min="10"
                 max="12"
                 type="text" list="<?= $inputName ?>"
                name="<?= $inputName ?>" <?= $arParams["arUserField"]["EDIT_IN_LIST"] != "Y" ? 'disabled="disabled"' : '' ?>

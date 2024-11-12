@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('slkdjflskdjflskdjflk')
     const innInput = document.querySelector('.js-dadata-inn input');
     const kppInput = document.querySelector('.js-dadata-kpp');
     const companyInput = document.querySelector('.js-dadata-company');
-    isValidInnCheck(innInput);
+    window.user.type == 'jur' && isValidInnCheck(innInput);
     innInput.addEventListener('input', debounce(async (e) => {
         console.log('log');
         companyInput.value = '';

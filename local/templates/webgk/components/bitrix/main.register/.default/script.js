@@ -3,7 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabsEl = document.querySelectorAll('.js-register__tabs');
     const tabs = document.querySelectorAll('.js-register__tab');
     const physFields = document.querySelectorAll('.js-phys-field input');
-    physFields.forEach(field => {field.setAttribute('required', '');});
+    physFields.forEach(field => {
+        field.setAttribute('required', '');
+    });
     const jurFields = document.querySelectorAll('.js-jur-field input');
     const formWrapper = document.querySelector('.js-reg-form');
     const form = formWrapper.querySelector('form');
@@ -21,15 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 formWrapper.classList.add('reg-form__active--active-phys');
                 formWrapper.classList.remove('reg-form__active--active-jur');
                 typeElHidden.value = "PHYSICAL";
-                jurFields.forEach(field => {field.removeAttribute('required');});
-                physFields.forEach(field => {field.setAttribute('required', '');});
+                jurFields.forEach(field => {
+                    field.removeAttribute('required');
+                    field.setCustomValidity('');
+                });
+                physFields.forEach(field => {
+                    field.setAttribute('required', '');
+                });
+                window.user.type = 'phys';
 
             } else if (target.dataset.type == 'jur') {
                 formWrapper.classList.remove('reg-form__active--active-phys');
                 formWrapper.classList.add('reg-form__active--active-jur');
                 typeElHidden.value = "JURIDICAL";
-                physFields.forEach(field => {field.removeAttribute('required');});
-                jurFields.forEach(field => {field.setAttribute('required', '');});
+                physFields.forEach(field => {
+                    field.removeAttribute('required');
+                    field.setCustomValidity('');
+                });
+                jurFields.forEach(field => {
+                    field.setAttribute('required', '');
+                });
+                window.user.type = 'jur';
             }
         })
     })
@@ -72,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             errorEl.innerHTML = errorText;
             errorEl.classList.add('active');
         }
+
         function hideBackendError() {
             errorEl.innerHTML = "";
             errorEl.classList.remove('active');
