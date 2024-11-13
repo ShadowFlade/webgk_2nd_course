@@ -41,7 +41,7 @@ if (empty($action))
 global $APPLICATION;
 
 $APPLICATION->IncludeComponent(
-	'bitrix:sale.order.ajax',
+	'webgk:sale.order.ajax',
 	'.default',
 	$params
 );

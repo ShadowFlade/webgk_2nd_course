@@ -932,8 +932,11 @@ class SaleOrderAjax extends \CBitrixComponent
 
 			$this->arUserResult['ORDER_PROP'][$property['ID']] = $curVal;
 		}
+        $this->arUserResult['ORDER_PROP'][10] = 12312323;
+        \Bitrix\Main\Diag\Debug::writeToFile($this->arUserResult['ORDER_PROP'], date("d.m.Y H:i:s"), "local/order_prop.log");
 
-		$this->checkProperties($order, $isPersonTypeChanged, $willUseProfile, $profileProperties);
+
+        $this->checkProperties($order, $isPersonTypeChanged, $willUseProfile, $profileProperties);
 
 		foreach (GetModuleEvents('sale', 'OnSaleComponentOrderProperties', true) as $arEvent)
 		{
@@ -954,7 +957,8 @@ class SaleOrderAjax extends \CBitrixComponent
 
 		$res = $propertyCollection->setValuesFromPost(['PROPERTIES' => $this->arUserResult['ORDER_PROP']], []);
 
-		if ($this->isOrderConfirmed)
+
+        if ($this->isOrderConfirmed)
 		{
 			if (!$res->isSuccess())
 			{
@@ -4764,7 +4768,7 @@ class SaleOrderAjax extends \CBitrixComponent
 		else
 			$error = Loc::getMessage('SESSID_ERROR');
 
-		$this->showAjaxAnswer([
+        $this->showAjaxAnswer([
 			'order' => $this->arResult['JS_DATA'],
 			'locations' => $this->arResult['LOCATIONS'],
 			'error' => $error,
@@ -4805,7 +4809,8 @@ class SaleOrderAjax extends \CBitrixComponent
 
 			$this->order = $this->createOrder($userId);
 
-			$isActiveUser = (int)$userId > 0;
+
+            $isActiveUser = (int)$userId > 0;
 
 			if ($isActiveUser && empty($this->arResult['ERROR']))
 			{
@@ -4910,8 +4915,9 @@ class SaleOrderAjax extends \CBitrixComponent
 
 		if ($this->request->get('save') != 'Y')
 			header('Content-Type: application/json');
+//        \Bitrix\Main\Diag\Debug::writeToFile($result, date("d.m.Y H:i:s"), "local/showAjaxAnswer.log");
 
-		echo Json::encode($result);
+        echo Json::encode($result);
 
 		CMain::FinalActions();
 		die();
@@ -5094,16 +5100,19 @@ class SaleOrderAjax extends \CBitrixComponent
 		$result["USER_PROFILES"] = $arResult["ORDER_PROP"]['USER_PROFILES'];
 
 		$arr = $this->order->getPropertyCollection()->getArray();
+        \Bitrix\Main\Diag\Debug::writeToFile($arr, date("d.m.Y H:i:s"), "local/propcollection.log");
 
-		foreach ($arr['properties'] as $key => $property)
+
+        foreach ($arr['properties'] as $key => $property)
 		{
 			if ($property['UTIL'] === 'Y')
 			{
 				unset($arr['properties'][$key]);
 			}
 		}
+        $customProps = $this->getCustomUserProps();
 
-		if (!empty($arr['groups']) && !empty($arr['properties']))
+        if (!empty($arr['groups']) && !empty($arr['properties']))
 		{
 			$arr['groups'] = array_values($arr['groups']);
 			$arr['properties'] = array_values($arr['properties']);
@@ -5117,8 +5126,11 @@ class SaleOrderAjax extends \CBitrixComponent
 
 			if (!empty($groupIndexList))
 			{
-				foreach ($arr['properties'] as $index => $propertyData)
+				foreach ($arr['properties'] as $index => &$propertyData)
 				{
+                    if (!empty($customProps[$propertyData['CODE']])) {
+                        $propertyData['VALUE'] = [$customProps[$propertyData['CODE']]];
+                    }
 					if (array_key_exists('PROPS_GROUP_ID', $propertyData))
 					{
 						if (!in_array($propertyData['PROPS_GROUP_ID'], $groupIndexList))
@@ -5137,7 +5149,9 @@ class SaleOrderAjax extends \CBitrixComponent
 		}
 
 		$result["ORDER_PROP"] = $arr;
-		$result['STORE_LIST'] = $arResult['STORE_LIST'];
+        \Bitrix\Main\Diag\Debug::writeToFile($result['ORDER_PROP'], date("d.m.Y H:i:s"), "local/js_order_prop.log");
+
+        $result['STORE_LIST'] = $arResult['STORE_LIST'];
 		$result['BUYER_STORE'] = $arResult['BUYER_STORE'];
 
 		$result['COUPON_LIST'] = [];
@@ -5221,7 +5235,8 @@ class SaleOrderAjax extends \CBitrixComponent
 
 		$arResult['LOCATIONS'] = $this->getLocationsResult();
 
-		foreach (GetModuleEvents("sale", 'OnSaleComponentOrderJsData', true) as $arEvent)
+
+        foreach (GetModuleEvents("sale", 'OnSaleComponentOrderJsData', true) as $arEvent)
 		{
 			ExecuteModuleEventEx($arEvent, [&$this->arResult, &$this->arParams]);
 		}
@@ -5650,9 +5665,12 @@ class SaleOrderAjax extends \CBitrixComponent
 
 			foreach ($modifiedFields as $field => $value)
 			{
-				switch ($field)
+                \Bitrix\Main\Diag\Debug::writeToFile($field, date("d.m.Y H:i:s"), "local/field.log");
+
+                switch ($field)
 				{
-					case 'PAY_CURRENT_ACCOUNT':
+
+                    case 'PAY_CURRENT_ACCOUNT':
 					case 'PAY_SYSTEM_ID':
 						$recalculatePayment = true;
 						break;
@@ -5662,7 +5680,8 @@ class SaleOrderAjax extends \CBitrixComponent
 					case 'ORDER_PROP':
 						if (is_array($value))
 						{
-							/** @var Sale\PropertyValue $property */
+
+                            /** @var Sale\PropertyValue $property */
 							foreach ($propertyCollection as $property)
 							{
 								if (array_key_exists($property->getPropertyId(), $value))
@@ -6554,4 +6573,22 @@ class SaleOrderAjax extends \CBitrixComponent
 				: null
 			;
 	}
+
+    private function getCustomUserProps(): array
+    {
+        global $USER;
+
+        $arRes = CUser::GetList(
+            false,
+            false,
+            ['ID' => $USER->GetID()],
+            ['SELECT' => ['UF_INN', 'UF_KPP', 'WORK_COMPANY']]
+        )->Fetch();
+        return [
+            'INN' => $arRes['UF_INN'],
+            'KPP' => $arRes['UF_KPP'],
+            'COMPANY' => $arRes['WORK_COMPANY']
+        ];
+    }
+
 }
