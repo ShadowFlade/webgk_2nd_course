@@ -21,9 +21,9 @@ class CatalogSyncService
     private $logger;
 
     //section id in => [section out]
-    private $SECTIONS_IN_IDS = [140, 141, 142];
+    private $SECTIONS_IN_IDS = [148, 149, 150];
 
-    private $NEW_PRODUCTS_SECTION_ID_OUT = 143;
+    private $NEW_PRODUCTS_SECTION_ID_OUT = 151;
 
 
     private $PROP_TYPES = [
@@ -859,6 +859,10 @@ class CatalogSyncService
                 new \Bitrix\Main\Entity\ExpressionField('AMOUNT', 'SUM(AMOUNT)', ['AMOUNT' => 'STORE.AMOUNT'])
             )
             ->exec()->fetch();
+        if($productId == 14561) {
+            \Bitrix\Main\Diag\Debug::writeToFile($iterator, date("d.m.Y H:i:s"), "local/134561.log");
+
+        }
         if ($iterator && $iterator["QUANTITY"] != $iterator["AMOUNT"]) {
             $available = $iterator["AMOUNT"] > 0 ? \Bitrix\Catalog\ProductTable::STATUS_YES : \Bitrix\Catalog\ProductTable::STATUS_NO;
             \Bitrix\Catalog\Model\Product::update($iterator["ID"], [

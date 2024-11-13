@@ -277,7 +277,7 @@
                             this.product.rcmId = arParams.PRODUCT.RCM_ID;
                         }
                     }
-
+                    console.log(arParams.OFFERS,' offers',this.product.id)
                     if (arParams.OFFERS && BX.type.isArray(arParams.OFFERS)) {
                         this.offers = arParams.OFFERS;
                         this.offerNum = 0;

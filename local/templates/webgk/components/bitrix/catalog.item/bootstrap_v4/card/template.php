@@ -292,7 +292,7 @@ use \Bitrix\Main\Localization\Loc;
 							if ($actualItem['CAN_BUY'])
 							{
 								?>
-								<div class="product-item-button-container" id="<?=$itemIds['BASKET_ACTIONS']?>">
+								<div class="product-item-button-container can-buy" id="<?=$itemIds['BASKET_ACTIONS']?>">
 									<button class="btn btn-primary <?=$buttonSizeClass?>" id="<?=$itemIds['BUY_LINK']?>"
 											href="javascript:void(0)" rel="nofollow">
 										<?=($arParams['ADD_TO_BASKET_ACTION'] === 'BUY' ? $arParams['MESS_BTN_BUY'] : $arParams['MESS_BTN_ADD_TO_BASKET'])?>
@@ -334,8 +334,9 @@ use \Bitrix\Main\Localization\Loc;
 						{
 							if ($arParams['PRODUCT_DISPLAY_MODE'] === 'Y')
 							{
+
 								?>
-								<div class="product-item-button-container">
+								<div class="product-item-button-container can-buy">
 									<?
 									if ($showSubscribe)
 									{
@@ -353,6 +354,7 @@ use \Bitrix\Main\Localization\Loc;
 											array('HIDE_ICONS' => 'Y')
 										);
 									}
+
 									?>
 									<button class="btn btn-link <?=$buttonSizeClass?>"
 											id="<?=$itemIds['NOT_AVAILABLE_MESS']?>" href="javascript:void(0)" rel="nofollow"
