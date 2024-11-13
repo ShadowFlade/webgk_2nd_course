@@ -423,7 +423,7 @@ class CatalogSyncService
     private
     function syncOffers(array $newEls = [], int $productId = 0) //main flow
     {
-        \Bitrix\Main\Diag\Debug::writeToFile($productId, date("d.m.Y H:i:s"), "local/syncing_offers.log");
+//        \Bitrix\Main\Diag\Debug::writeToFile($productId, date("d.m.Y H:i:s"), "local/syncing_offers.log");
 
         $filterOffers = ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN];
 
@@ -477,7 +477,7 @@ class CatalogSyncService
 
         $productType = \Bitrix\Catalog\ProductTable::TYPE_OFFER;
         $count = 0;
-        \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/syncing_offers.log");
+//        \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/syncing_offers.log");
 
         foreach ($els as $key => $el) {
 
@@ -836,14 +836,14 @@ class CatalogSyncService
         &$createdCount
     )
     {
-        \Bitrix\Main\Diag\Debug::writeToFile([
-            "el" => $el,
-            '$newEl' =>$newEl,
-            '$existingEls' => $existingEls,
-            '$newFields' => $newFields,
-            '$updatedCount' => &$updatedCount,
-            '$createdCount' => &$createdCount
-        ], date("d.m.Y H:i:s"), "local/syncing_offers.log");
+//        \Bitrix\Main\Diag\Debug::writeToFile([
+//            "el" => $el,
+//            '$newEl' =>$newEl,
+//            '$existingEls' => $existingEls,
+//            '$newFields' => $newFields,
+//            '$updatedCount' => &$updatedCount,
+//            '$createdCount' => &$createdCount
+//        ], date("d.m.Y H:i:s"), "local/syncing_offers.log");
 
         $isThisElExists = isset($existingEls[$el['CODE']]);
         $isSuccess = false;
