@@ -616,6 +616,8 @@ class CatalogSyncService
                 $errCollection[$el['ID']][] = $errMessage;
             }
         }
+        $this->setQuantityByProduct($newProductId);
+
         return ['ERRORS' => $errCollection];
     }
 
@@ -638,6 +640,8 @@ class CatalogSyncService
                 $errCollection[$el['ID']][] = $errMessage;
             }
         }
+        $this->setQuantityByProduct($newOfferId);
+
         !empty($errCollection) ? $this->logger->logError($errCollection) : false;
         return ['ERRORS' => $errCollection];
     }
@@ -661,7 +665,6 @@ class CatalogSyncService
             $action = 'CREATED';
             $id = $storeResult->getId();
             $addedProductStoreIds[] = $id;
-            $this->setQuantityByProduct($id);
         }
 
         return ['ERRORS' => $errCollection, 'ACTION' => $action, 'ID' => $storeResult->getId()];
