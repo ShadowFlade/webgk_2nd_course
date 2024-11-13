@@ -45,7 +45,7 @@ class CatalogSyncService
         $this->logger = new Logger();
     }
 
-    public function init(int $productId, $isStartOver = false)
+    public function init(int $productId = 0, $isStartOver = false)
     {
 
         if ($isStartOver) {//creating sections structure
@@ -77,7 +77,7 @@ class CatalogSyncService
     private function initProductByProductSync(int $productId)
     {
         if($this->isOffer($productId)) {
-            $this->syncOffers($productId);
+            $this->syncOffers([], $productId);
             $mainProduct = \CIBlockElement::GetList(false,['IBLOCK_ID'=>$this->GOODS_IB_ID_IN],false,false,['ID','IBLOCK_ID','PROPERTY_CML2_LINK'])->Fetch();
 
             if(empty($mainProduct)) {
@@ -421,8 +421,10 @@ class CatalogSyncService
     }
 
     private
-    function syncOffers($newEls, int $productId = 0) //main flow
+    function syncOffers(array $newEls = [], int $productId = 0) //main flow
     {
+        \Bitrix\Main\Diag\Debug::writeToFile($productId, date("d.m.Y H:i:s"), "local/syncing_offers.log");
+
         $filterOffers = ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN];
 
         if(!empty($productId)) {
@@ -475,6 +477,8 @@ class CatalogSyncService
 
         $productType = \Bitrix\Catalog\ProductTable::TYPE_OFFER;
         $count = 0;
+        \Bitrix\Main\Diag\Debug::writeToFile('im here', date("d.m.Y H:i:s"), "local/syncing_offers.log");
+
         foreach ($els as $key => $el) {
 
             $element = \CIBlockElement::GetByID($el['ID'])->GetNextElement();
@@ -497,6 +501,16 @@ class CatalogSyncService
 
             $detailPicture = \CFile::MakeFileArray($fields['DETAIL_PICTURE']);
 
+            if(!empty($productId)) {
+                $cml2Current = \CIBlockElement::GetProperty(
+                    $this->GOODS_TP_IB_ID_OUT,
+                    $existingEls[$el['CODE']]['ID'],
+                    false,false,['CODE'=>'CML2_LINK']
+                )->Fetch();
+                if(!empty($cml2Current) ) {
+                    $allProps['CML2_LINK'] = $cml2Current['VALUE'];
+                }
+            }
 
             $newFields = [
                 'IBLOCK_ID' => $this->GOODS_TP_IB_ID_OUT,
@@ -822,6 +836,15 @@ class CatalogSyncService
         &$createdCount
     )
     {
+        \Bitrix\Main\Diag\Debug::writeToFile([
+            "el" => $el,
+            '$newEl' =>$newEl,
+            '$existingEls' => $existingEls,
+            '$newFields' => $newFields,
+            '$updatedCount' => &$updatedCount,
+            '$createdCount' => &$createdCount
+        ], date("d.m.Y H:i:s"), "local/syncing_offers.log");
+
         $isThisElExists = isset($existingEls[$el['CODE']]);
         $isSuccess = false;
         $errCollection = [];
