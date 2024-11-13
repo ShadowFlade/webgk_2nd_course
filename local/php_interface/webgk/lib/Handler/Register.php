@@ -20,6 +20,16 @@ class Register
 
     private static function initIblockHandlers()
     {
+        self::$eventManager->addEventHandler(
+            'iblock',
+            'OnAfterIBlockElementUpdate',
+            ['\Webgk\Handler\Iblock', 'onAfterIblockElementSynced']
+        );
+        self::$eventManager->addEventHandler(
+            'iblock',
+            'OnAfterIBlockElementAdd',
+            ['\Webgk\Handler\Iblock', 'onAfterIblockElementSynced']
+        );
 
     }
 
@@ -49,6 +59,12 @@ class Register
     private static function initCatalogHandlers()
     {
         self::$eventManager->addEventHandler("catalog", "OnGetOptimalPrice", ['\Webgk\Handler\Catalog', 'GetOptimalPrice']);
+        self::$eventManager->addEventHandler("catalog", "OnPriceAdd", ['\Webgk\Handler\Catalog', 'OnPrice1cSynced']);//не забыть включить поддержку устаревших событий
+        self::$eventManager->addEventHandler("catalog", "OnPriceUpdate", ['\Webgk\Handler\Catalog', 'OnPrice1cSynced']);//не забыть включить поддержку устаревших событий
+        self::$eventManager->addEventHandler("catalog", "OnStoreProductAdd", ['\Webgk\Handler\Catalog', 'onStoreProduct1cSynced']);//не забыть включить поддержку устаревших событий
+        self::$eventManager->addEventHandler("catalog", "OnStoreProductUpdate", ['\Webgk\Handler\Catalog', 'onStoreProduct1cSynced']);//не забыть включить поддержку устаревших событий
+
+
     }
 
     private static function initUserHandlers()

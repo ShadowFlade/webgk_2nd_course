@@ -45,7 +45,7 @@ class CatalogSyncService
         $this->logger = new Logger();
     }
 
-    public function init($isStartOver = false)
+    public function init(int $productId, $isStartOver = false)
     {
 
         if ($isStartOver) {//creating sections structure
@@ -61,9 +61,35 @@ class CatalogSyncService
             $this->SECTIONS_IN_IDS = $newSectionIds;
         }
 
+        if(!empty($productId)) {
+            $this->initProductByProductSync($productId);
+            return;
+        }
+        $this->initFullSync();
+    }
 
+    private function initFullSync()
+    {
         $newEls = $this->syncMainCatalog();
         $this->syncOffers($newEls);
+    }
+
+    private function initProductByProductSync(int $productId)
+    {
+        if($this->isOffer($productId)) {
+            $this->syncOffers($productId);
+            $mainProduct = \CIBlockElement::GetList(false,['IBLOCK_ID'=>$this->GOODS_IB_ID_IN],false,false,['ID','IBLOCK_ID','PROPERTY_CML2_LINK'])->Fetch();
+
+            if(empty($mainProduct)) {
+                $this->logger->logError("Main product of offer with id {$productId} not found");
+                return;
+            }
+
+            $newMainEl = new \CIBlockElement();
+            $newMainEl->Update($mainProduct['ID'],['TIMESTAMP_X'=>new \Bitrix\Main\Type\DateTime()]);//триггерим обновление для основого товара
+        } else {
+            $this->syncMainCatalog($productId);
+        }
     }
 
     public function createProps(int $ibIn, int $ibOut, string $iblock)
@@ -90,14 +116,7 @@ class CatalogSyncService
         }
 
         $propsSkipped = [];
-//        if ($iblock == 'offers') {
-//            \Bitrix\Main\Diag\Debug::writeToFile(
-//                ['existing' => $existingProps, 'props' => $props],
-//                date("d.m.Y H:i:s"),
-//                "local/offersprops.log"
-//            );
-//
-//        }
+
 
         foreach ($props as $prop) {
 
@@ -114,9 +133,7 @@ class CatalogSyncService
                 $listProp = $this->createListProp($prop, $ibOut);
 
                 $id = $newProp->Add($listProp);
-//                if ($iblock == 'offers') {
-//                    \Bitrix\Main\Diag\Debug::writeToFile(['new prop id' => $id, 'list fields' => $listProp], date("d.m.Y H:i:s"), "local/offersprops.log");
-//                }
+
 
 
                 if (!$id) {
@@ -289,10 +306,16 @@ class CatalogSyncService
     }
 
 
-    private function syncMainCatalog()
+    private function syncMainCatalog(int $productId = 0)
     {
+        $filterEls = ['IBLOCK_ID' => $this->GOODS_IB_ID_IN];
+
+        if(!empty($productId)) {
+            $filterEls['ID'] = $productId;
+        }
+
         $elsDB = \Bitrix\Iblock\ElementTable::getList([
-            'filter' => ['IBLOCK_ID' => $this->GOODS_IB_ID_IN],
+            'filter' => $filterEls,
             'select' => ['ID', 'XML_ID', 'CODE', 'IBLOCK_SECTION_ID']
         ]);
         while ($el = $elsDB->fetch()) {
@@ -398,11 +421,16 @@ class CatalogSyncService
     }
 
     private
-    function syncOffers($newEls) //main flow
+    function syncOffers($newEls, int $productId = 0) //main flow
     {
+        $filterOffers = ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN];
+
+        if(!empty($productId)) {
+            $filterOffers['ID'] = $productId;
+        }
         $elsDB = \CIBlockElement::GetList(
             false,
-            ['IBLOCK_ID' => $this->GOODS_TP_IB_ID_IN],
+            $filterOffers,
             false,
             false,
             ['ID', 'NAME', 'IBLOCK_ID', 'XML_ID', 'PROPERTY_CML2_LINK', 'CODE']
@@ -559,9 +587,13 @@ class CatalogSyncService
         }
 
         $errCollection = [];
+
         foreach ($oldEls as $storeId => $el) {
+
             if (!isset($newEls[$storeId])) continue;
-            $updateRes = StoreProductTable::update($newEls[$storeId]['ID'], $newEls[$storeId]);
+            unset($oldEls[$storeId]['ID']);
+            $oldEls[$storeId]['PRODUCT_ID'] = $newProductId;
+            $updateRes = StoreProductTable::update($newEls[$storeId]['ID'], $oldEls[$storeId]);
             if ($updateRes->isSuccess()) {
                 $updatedProductStoreIds[] = $updateRes->getId();
             } else {
@@ -859,10 +891,7 @@ class CatalogSyncService
                 new \Bitrix\Main\Entity\ExpressionField('AMOUNT', 'SUM(AMOUNT)', ['AMOUNT' => 'STORE.AMOUNT'])
             )
             ->exec()->fetch();
-        if($productId == 14561) {
-            \Bitrix\Main\Diag\Debug::writeToFile($iterator, date("d.m.Y H:i:s"), "local/134561.log");
 
-        }
         if ($iterator && $iterator["QUANTITY"] != $iterator["AMOUNT"]) {
             $available = $iterator["AMOUNT"] > 0 ? \Bitrix\Catalog\ProductTable::STATUS_YES : \Bitrix\Catalog\ProductTable::STATUS_NO;
             \Bitrix\Catalog\Model\Product::update($iterator["ID"], [
@@ -918,6 +947,15 @@ class CatalogSyncService
         }
 
         return $sectionsIn;
+    }
+
+    private function isOffer(int $productId)
+    {
+        $product = \Bitrix\Catalog\ProductTable::getList([
+            'filter' => ['ID' => $productId],
+            'select' => ['ID','TYPE']
+        ])->fetch();
+        return $product['TYPE'] ==  \Bitrix\Catalog\ProductTable::TYPE_OFFER;
     }
 }
 
